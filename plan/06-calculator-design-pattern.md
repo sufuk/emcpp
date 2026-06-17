@@ -1,50 +1,13 @@
-# The Calculator Design Pattern
+# The Calculator Design Pattern 🧮
 
-> The single, repeatable shape every one of the ~52 NinjaEMC calculators takes in the `emc`
-> library: a typed `Input` aggregate, a typed `Result`, a `[[nodiscard]] std::expected<Result, Error>
-> calculate(const Input&)` free function, an optional `validate()`, and a `Calculator` concept that
-> binds the triple into a compile-checked contract. This document is the template you copy 52 times.
+> The single, repeatable shape every one of the ~52 `emc` calculators takes: a typed `Input`
+> aggregate, a typed `Result`, a `[[nodiscard]] std::expected<Result, Error> calculate(const Input&)`
+> free function, an optional `validate()`, and a `Calculator` concept that binds the triple into a
+> compile-checked contract. This is the template you copy 52 times.
 
-This is the **foundational** document of the plan. Docs
-[07-calculator-inventory.md](07-calculator-inventory.md) (the work-list) and
-[10-migration-roadmap.md](10-migration-roadmap.md) (the sequencing) both assume the pattern defined
-here and refer back to the checklist in section 7. Read this before porting any calculator.
-
----
-
-## 0. Why a pattern at all? (the problem we are escaping)
-
-In the old app there is **no pattern**. Every formula lives inside a Qt `clicked` lambda in a widget
-constructor. The math, the unit conversion, the material lookup, the validation, and the I/O are all
-welded into one anonymous closure. Concretely, in
-`src/BasicCalculations/SkinDepth/SkinDepthWidget.cpp` the entire skin-depth calculation is:
-
-```cpp
-// BEFORE — SkinDepthWidget.cpp, lines 64-72 (the whole "calculator")
-connect(ui->solveButton, &RichButton::clicked, [this]() {
-    qreal frequency = ui->frequency_spinbox->value() * ui->frequencyUnitBox->currentData().toReal();
-    qreal conductivity = ui->conductivity_spinbox->value();
-    qreal relativePermeability = ui->ur->value() * mu0;       // mu0 re-defined in this header
-    qreal skinDepth = qSqrt(1 / (M_PI * frequency * relativePermeability * conductivity));
-    ui->skinDepth->setValue(skinDepth / ui->skinDepth_unit->currentData().toReal());
-});
-```
-
-Everything that is wrong with the codebase is visible in those five lines:
-
-| Problem | Evidence in the snippet | Where the pattern fixes it |
-|---|---|---|
-| Math is not callable without a widget | the formula is inside a `clicked` lambda | free function `calculate()` |
-| Inputs are read positionally from UI | `ui->frequency_spinbox->value()` | named `Input` aggregate fields |
-| Units are bare `double` factors | `* ...currentData().toReal()` | mp-units typed quantities |
-| `mu0` re-defined per file (8+ files) | `* mu0` | `emc::constants::mu_0` (one source) |
-| Materials hardcoded inline | conductivity from a combobox `if/else` | `emc::materials` database |
-| No error channel | silent garbage if `frequency == 0` | `std::expected<Result, Error>` |
-| Untestable without driving the GUI | `ui->solveButton->clicked()` in tests | pure function + golden CSV |
-
-The pattern below makes each calculator a **pure, typed, testable, reusable** unit. The Qt widget
-becomes a dumb adapter: read fields → fill `Input` → call `calculate()` → render `Result` or show
-the error. That is the entire goal of the rewrite, expressed as a code shape.
+Docs [07-calculator-inventory.md](07-calculator-inventory.md) (the work-list) and
+[10-build-roadmap.md](10-build-roadmap.md) (the sequencing) both assume the pattern defined here and
+refer back to the checklist in section 6.
 
 ---
 
@@ -53,21 +16,21 @@ the error. That is the entire goal of the rewrite, expressed as a code shape.
 Every calculator is **five named things** living in one category namespace (e.g. `emc::basic`,
 `emc::component`, `emc::shielding`). For a calculator named `Foo`:
 
-```
+```text
 struct FooInput   { /* mp-units-typed fields, sensible defaults */ };
 struct FooResult  { /* mp-units-typed fields */ };
-[[nodiscard]] std::expected<void,   Error> validate(const FooInput&);   // (d) optional
-[[nodiscard]] std::expected<FooResult, Error> calculate(const FooInput&); // (c) required
+[[nodiscard]] std::expected<void,      Error> validate(const FooInput&);    // (d) optional
+[[nodiscard]] std::expected<FooResult, Error> calculate(const FooInput&);   // (c) required
 // (e) the (Input, Result, calculate) triple satisfies the Calculator concept
 ```
 
 Header lives in `include/emc/<category>/foo.hpp`; the body of `calculate`/`validate` lives in
-`src/<category>/foo.cpp`. (Library shape, install/export: see
-[08-build-system-cmake.md](08-build-system-cmake.md). It is a compiled lib, not header-only.)
+`src/<category>/foo.cpp`. It is a compiled library, not header-only (install/export shape:
+[08-build-system-cmake.md](08-build-system-cmake.md)).
 
 ### (a) The `Input` aggregate struct
 
-```cpp
+```c++
 // include/emc/basic/skin_depth.hpp
 #pragma once
 #include <emc/units.hpp>       // emc::units::* (mp-units vocabulary)  -> doc 03
@@ -77,13 +40,12 @@ Header lives in `include/emc/<category>/foo.hpp`; the body of `calculate`/`valid
 
 namespace emc::basic {
 
-using namespace mp_units;                 // for the [unit] literal syntax in this header
-using mp_units::si::unit_symbols::Hz;     // brought in for member-default literals
+using namespace mp_units;
 
 struct SkinDepthInput {
-    quantity<isq::frequency[si::hertz]>                 frequency;
+    quantity<isq::frequency[si::hertz]>                             frequency;
     quantity<isq::electrical_conductivity[si::siemens / si::metre]> conductivity;
-    quantity<one>                                       relative_permeability{1 * one};
+    quantity<one>                                                  relative_permeability{1 * one};
 };
 
 } // namespace emc::basic
@@ -92,25 +54,23 @@ struct SkinDepthInput {
 Rules for `Input`:
 
 * **It is an aggregate** (no user-declared constructors, no private members). That unlocks
-  *designated initializers* at the call site (section 2) and *aggregate `==`*/structured bindings.
+  *designated initializers* at the call site (section 2) plus aggregate `==` and structured bindings.
 * **Every dimensional field is an mp-units `quantity`**, never a bare `double`. The dimension is part
-  of the type, so `frequency = 3 * mm` does not compile. This is the mechanism that deletes the 541
-  hand-wired `addItem(unit, factor)` conversions and the magic `* 39.37` constants (doc 03).
-* **Sensible defaults** go on members that have an obvious neutral value. `relative_permeability{1}`
-  is the non-magnetic default; a designer who omits it gets the common case. Required physical inputs
-  (here `frequency`, `conductivity`) get *no* default so the compiler forces the caller to supply
-  them — there is no silent zero.
+  of the type, so `frequency = 3 * mm` does not compile.
+* **Sensible defaults** go on members with an obvious neutral value: `relative_permeability{1}` is
+  the non-magnetic default. Required physical inputs (`frequency`, `conductivity`) get *no* default,
+  so the compiler forces the caller to supply them — there is no silent zero.
 
-> **Why an aggregate struct of named quantities, not function parameters?**
-> The old code reads inputs positionally and untyped. With six `qreal` parameters
-> `calc(double, double, double, double, double, double)` nobody can tell at the call site which is
-> width and which is height — exactly the bug class that the MicrostripTrace 8-branch trees invite. A
-> named aggregate makes every call self-documenting and makes adding a field a *source-compatible*
-> change (old call sites still compile; the new field takes its default).
+> [!NOTE]
+> **Why an aggregate of named quantities, not positional parameters?**
+> EMC formulas routinely take 4–8 length/impedance arguments; a `calc(double, double, double, ...)`
+> signature hides which argument is width and which is height. A named aggregate makes every call
+> self-documenting and makes adding a field a *source-compatible* change — old call sites still
+> compile, and the new field takes its default.
 
 ### (b) The `Result` struct
 
-```cpp
+```c++
 struct SkinDepthResult {
     quantity<isq::length[si::metre]> skin_depth;
 };
@@ -119,54 +79,50 @@ struct SkinDepthResult {
 Rules for `Result`:
 
 * Also an aggregate of mp-units quantities. The caller chooses the display unit at render time
-  (`r.skin_depth.in(si::micro<si::metre>)`), so the library never bakes in a presentation unit — this
-  is what replaces `ui->skinDepth_unit->currentData()` scaling.
-* For **multi-output** calculators the Result simply has more fields (section 4).
+  (`r.skin_depth.in(si::micro<si::metre>)`), so the library never bakes in a presentation unit.
+* For **multi-output** calculators the `Result` simply has more fields (section 4).
 
 ### (c) `calculate` — the one required function
 
-```cpp
+```c++
 [[nodiscard]] std::expected<SkinDepthResult, Error> calculate(const SkinDepthInput& in);
 ```
 
 * Returns `std::expected<Result, Error>`: success carries the typed `Result`, failure carries an
-  `emc::Error` (an `ErrorCode` plus context). This is the single error channel for the whole library;
-  it replaces the scattered `QMessageBox::warning(...)` calls and the `return EXIT_FAILURE` sentinel
-  in `StandardGaugeWireWidget.cpp`. See [05-error-handling-and-validation.md](05-error-handling-and-validation.md).
+  `emc::Error` (an `ErrorCode` plus context). This is the single error channel for the whole library
+  (see [05-error-handling-and-validation.md](05-error-handling-and-validation.md)).
 * `[[nodiscard]]` — ignoring the result is almost always a bug, because the result *is* the answer
-  and *is* the error. The attribute makes "computed a skin depth and threw it away" a compiler
-  warning.
-* It is a **free function**, not a member. There is no object to construct, no state to manage, no
-  vtable. (See section 5 on purity.)
+  and *is* the error.
+* It is a **free function**, not a member: no object to construct, no state to manage, no vtable
+  (section 5).
 
 ### (d) `validate` — optional range checks, separable from the math
 
-```cpp
+```c++
 [[nodiscard]] std::expected<void, Error> validate(const SkinDepthInput& in);
 ```
 
 `validate` answers "are these inputs in the physically meaningful domain?" and returns
-`expected<void, Error>` — `{}` on success, an `Error` on the first violation. It is *optional*: trivial
-calculators may omit it and let `calculate` guard the few things it must. When present, `calculate`
-calls `validate` first:
+`expected<void, Error>` — `{}` on success, an `Error` on the first violation. It is *optional*:
+trivial calculators may omit it and let `calculate` guard the few things it must. When present,
+`calculate` calls `validate` first:
 
-```cpp
+```c++
 auto calculate(const SkinDepthInput& in) -> std::expected<SkinDepthResult, Error> {
     if (auto ok = validate(in); !ok) return std::unexpected(ok.error());
     /* ...math... */
 }
 ```
 
-Keeping `validate` separate lets a UI **pre-flight** the inputs (grey out the Solve button, show an
-inline hint) by calling `validate` alone, without committing to the calculation — something the old
-inline `QMessageBox` checks, fused into the formula, could never offer.
+Keeping `validate` separate lets a front end **pre-flight** the inputs (disable the solve action,
+show an inline hint) by calling `validate` alone, without committing to the calculation.
 
 ### (e) The `Calculator` concept — the contract, enforced at compile time
 
 The concept lives once, in `include/emc/calculator.hpp`, and binds the three pieces into a checkable
 shape:
 
-```cpp
+```c++
 // include/emc/calculator.hpp
 #pragma once
 #include <emc/error.hpp>
@@ -198,12 +154,12 @@ concept ValidatedCalculator =
 } // namespace emc
 ```
 
-Because our calculators are **free functions in a namespace**, not classes, we bind them to the
-concept with a tiny **trait/tag type** per calculator. This is a thin, zero-overhead descriptor — it
-holds no data and is never instantiated at runtime; it exists only so generic code (test harnesses,
-batch runners, future reflection) can name the triple as one entity:
+Because the calculators are **free functions in a namespace**, not classes, we bind them to the
+concept with a tiny **trait/tag type** per calculator — a thin, zero-overhead descriptor that holds
+no data and is never instantiated at runtime. It exists only so generic code (test harnesses, batch
+runners, future reflection) can name the triple as one entity:
 
-```cpp
+```c++
 // at the bottom of include/emc/basic/skin_depth.hpp
 namespace emc::basic {
 
@@ -218,97 +174,81 @@ static_assert(emc::ValidatedCalculator<SkinDepth>); // contract checked at compi
 } // namespace emc::basic
 ```
 
-> **Why a concept instead of a virtual base class / inheritance?**
-> The old code has no abstraction at all, but the *naive* OO fix would be `class Calculator { virtual
-> Result solve() = 0; };` — which forces heap allocation, a vtable, type erasure of the input/result,
-> and runtime dispatch for math that is pure and known at the call site. The `Calculator` *concept*
-> gives us the same "all calculators share a shape" guarantee **with zero runtime cost** and **better
-> diagnostics**: a calculator whose `calculate` returns the wrong type fails the `static_assert` *in
-> its own header* with a readable message, not at some distant generic call. It also lets us write one
-> generic golden-vector runner (doc 09) that works for all 52 calculators:
-> `template <emc::Calculator C> void run_golden(...)`.
+> [!TIP]
+> **Why a concept instead of a virtual base class?**
+> An OO base `class Calculator { virtual Result solve() = 0; }` forces heap allocation, a vtable,
+> type erasure of the input/result, and runtime dispatch — for math that is pure and known at the
+> call site. The `Calculator` *concept* gives the same "all calculators share a shape" guarantee
+> with **zero runtime cost** and **better diagnostics**: a calculator whose `calculate` returns the
+> wrong type fails the `static_assert` *in its own header* with a readable message. It also lets us
+> write one generic golden-vector runner that works for all 52 calculators:
+> `template <emc::Calculator C> void run_golden(...)` (doc 09).
 
-> **Why `static_assert(Calculator<...>)` in the header?**
-> It turns the contract into a build-time tripwire. If someone edits `SkinDepthResult` and forgets to
-> update the tag, or changes `calculate`'s return type, the library *fails to compile at the point of
-> the mistake*. This is the modern replacement for "hope the developer followed the convention."
+The header `static_assert(Calculator<...>)` turns the contract into a build-time tripwire: change a
+`Result` field or a `calculate` return type and forget to update the tag, and the library *fails to
+compile at the point of the mistake*.
 
 ---
 
 ## 2. Call-site ergonomics: designated initializers + unit literals
 
 Because `Input` is an aggregate of mp-units quantities, calls read like the formula's variable list,
-in any order, with units welded on:
+with units welded on:
 
-```cpp
+```c++
 #include <emc/basic/skin_depth.hpp>
 using namespace mp_units;
 using namespace mp_units::si::unit_symbols;     // Hz, m, S, ...
 using mp_units::si::unit_symbols::MHz;
 
 auto r = emc::basic::calculate({
-    .frequency            = 27 * MHz,
-    .conductivity         = 1.4493e7 * (si::siemens / si::metre),
+    .frequency             = 27 * MHz,
+    .conductivity          = 1.4493e7 * (si::siemens / si::metre),
     .relative_permeability = 600 * one,          // Nickel
 });
 if (!r) { /* handle r.error() */ }
 std::print("delta = {}\n", r->skin_depth.in(si::micro<si::metre>));
 ```
 
-Contrast with the old positional, unit-erased reads:
+> [!IMPORTANT]
+> **Modern C++ features used here / and why**
+> * **Designated initializers** (C++20) — `.frequency = 27 * MHz` names the field *and* the unit, so
+>   a call is self-documenting; keep fields in declaration order to satisfy the standard.
+> * **mp-units typed quantities** — EMC inputs span Hz..GHz and m..mils, so compile-time unit safety
+>   matters: `27 * mm` for a `frequency` field is a *compile error*, not a wrong number silently fed
+>   into `sqrt`.
+> * **Defaults on neutral fields** — a copper call can omit `relative_permeability` (defaults to
+>   `1 * one`); a nickel call supplies it. No overload explosion.
 
-```cpp
-// BEFORE: which value is which? what unit? nobody can tell from the call.
-qreal frequency = ui->frequency_spinbox->value() * ui->frequencyUnitBox->currentData().toReal();
-qreal conductivity = ui->conductivity_spinbox->value();
-qreal relativePermeability = ui->ur->value() * mu0;
-```
-
-Ergonomic wins, each tied to a real pain point:
-
-* **Self-documenting** — `.frequency = 27 * MHz` names the field *and* the unit. The reader never has
-  to know combobox ordering or which `currentData()` factor applies.
-* **Order-independent** — designated initializers can be written in any order the author finds
-  readable (C++20+; with our aggregates they may appear in declaration order — keep them in struct
-  order to satisfy the standard).
-* **Unit-safe by construction** — `27 * mm` for `frequency` is a *compile error*, not a wrong number
-  silently fed into `qSqrt`. This is the literal mechanism that deletes the `* 39.37` scattered
-  through `MicrostripTraceWidget.cpp` (doc 03).
-* **Defaults disappear when unwanted** — a copper call can omit `relative_permeability` (defaults to
-  `1 * one`); a nickel call supplies it. No overload explosion.
-
-The Qt widget's job shrinks to a mechanical adapter (full example in section 6.A).
+A generic front end (printing with `std::print`, a CLI, a service) does the marshalling: read inputs
+→ fill `Input` → call `calculate` → render `Result` or report the error (full example in section 6).
 
 ---
 
 ## 3. The bidirectional / solve-for-X pattern
 
-`MicrostripTraceWidget` can solve for any one of **Z0, H, T, or W** given the other three. In the old
-code this is four near-identical methods (`microstrip`, `calH`, `calT`, `calW`), each ~80 lines,
-each containing the **same 8-branch nested `if` tree** that exists *only* to apply mm-vs-mils unit
-conversions. The actual math in each is a single rearranged equation:
+A microstrip trace can solve for any one of **Z0, H, T, or W** given the other three. Each is a
+single rearrangement of one impedance equation:
 
 ```text
-Z0 = 87 * ln( 5.98*H / (0.8*W + T) ) / sqrt(eps + 1.41)        // solve Z0  (microstrip)
-H  = exp( Z0*sqrt(eps+1.41)/87 ) * (0.8*W + T) / 5.98          // solve H    (calH)
-T  = 5.98*H / exp( Z0*sqrt(eps+1.41)/87 ) - 0.8*W              // solve T    (calT)
-W  = ( 5.98*H / exp( Z0*sqrt(eps+1.41)/87 ) - T ) / 0.8        // solve W    (calW)
+Z0 = 87 * ln( 5.98*H / (0.8*W + T) ) / sqrt(eps + 1.41)        // solve Z0
+H  = exp( Z0*sqrt(eps+1.41)/87 ) * (0.8*W + T) / 5.98          // solve H
+T  = 5.98*H / exp( Z0*sqrt(eps+1.41)/87 ) - 0.8*W              // solve T
+W  = ( 5.98*H / exp( Z0*sqrt(eps+1.41)/87 ) - T ) / 0.8        // solve W
 ```
 
-Every `if (ui->hunitRadioMMButton->isChecked()) ... else ... * 39.37` branch is pure unit plumbing.
-With mp-units, **all of it vanishes**: the quantities carry their units, conversions are implicit and
-compile-checked, and `* 39.37` never appears.
+These are standard closed-form microstrip impedance relations. With mp-units the quantities carry
+their units and conversions are implicit and compile-checked.
 
-### Recommended design: four typed solver functions (not an enum dispatch)
+### Design: four typed solver functions (not an enum dispatch)
 
 Provide one function per unknown, each with its own typed `Input`/`Result`:
 
-```cpp
+```c++
 // include/emc/component/microstrip_trace.hpp
 namespace emc::component {
 
 using namespace mp_units;
-using mp_units::quantity;
 
 // --- Solve Z0 (and the derived C0, Tpd) from the geometry -------------------
 struct MicrostripImpedanceInput {
@@ -318,8 +258,8 @@ struct MicrostripImpedanceInput {
     quantity<one>                       relative_permittivity;
 };
 struct MicrostripImpedanceResult {
-    quantity<isq::resistance[si::ohm]>                   z0;
-    quantity<isq::capacitance[si::pico<si::farad> / si::metre]> c0;   // per length
+    quantity<isq::resistance[si::ohm]>                          z0;
+    quantity<isq::capacitance[si::pico<si::farad>] / si::metre> c0;   // per length
     quantity<isq::time[si::pico<si::second>] / si::metre>       tpd;  // per length
 };
 [[nodiscard]] std::expected<void, Error>
@@ -339,27 +279,27 @@ struct MicrostripHeightResult { quantity<isq::height[si::metre]> h; };
     solve_height(const MicrostripHeightInput&);
 
 // ... solve_thickness(MicrostripThicknessInput) -> {t}
-// ... solve_width(MicrostripWidthInput)        -> {w}
+// ... solve_width(MicrostripWidthInput)         -> {w}
 
 } // namespace emc::component
 ```
 
+> [!NOTE]
 > **Why four typed functions and not one `enum SolveFor` + a single entry point?**
-> An `enum SolveFor { Z0, H, T, W }` plus a god-struct that has *every* field optional (because three
-> are known and one is the unknown) re-introduces exactly the problem we are deleting: the caller can
-> ask to solve for `H` while leaving `z0` unset, or solve for `Z0` while leaving `w` unset, and
-> nothing catches it until runtime. With four typed functions, **the unknown is simply absent from the
-> input type and present in the result type.** `solve_height`'s `Input` has no `h` field — you
-> *cannot* forget to provide a known, and you *cannot* accidentally provide the unknown. The compiler
-> enforces the four well-formed problems. This also gives each solver its own honest `[[nodiscard]]`
-> result and its own precise `validate`. The enum approach trades compile-time safety for a single
-> name; we prefer safety. (If a UI wants a single dispatch point, it writes a 4-line `switch` over
-> *its own* radio-button state — that adapter belongs in the UI, not the library.)
+> An `enum SolveFor { Z0, H, T, W }` plus a god-struct with *every* field optional (three known, one
+> unknown) lets the caller ask to solve for `H` while leaving `z0` unset, with nothing caught until
+> runtime. With four typed functions, **the unknown is simply absent from the input type and present
+> in the result type.** `solve_height`'s `Input` has no `h` field — you *cannot* forget to provide a
+> known, and you *cannot* accidentally provide the unknown. Each solver also gets its own honest
+> `[[nodiscard]]` result and its own precise `validate`. A front end that wants a single dispatch
+> point writes a 4-line `switch` over *its own* state — that adapter belongs in the front end, not
+> the library.
 
-The mp-units payoff, spelled out. The old `calH` is 86 lines because of the unit tree; the library
-body is the bare equation:
+The geometry math is on dimensionless ratios of lengths, so the body evaluates it in one chosen
+coherent unit (`mm`) to reproduce the standard constants exactly; mp-units guarantees we *enter* that
+unit correctly regardless of what the caller supplied:
 
-```cpp
+```c++
 // src/component/microstrip_trace.cpp
 auto solve_height(const MicrostripHeightInput& in)
     -> std::expected<MicrostripHeightResult, Error>
@@ -367,7 +307,6 @@ auto solve_height(const MicrostripHeightInput& in)
     using mp_units::si::unit_symbols::mm;
     const double eps = in.relative_permittivity.numerical_value_in(one);
     const double Z   = in.z0.numerical_value_in(si::ohm);
-    // Geometry math is dimensionless ratios -> evaluate in a single coherent unit (mm), once.
     const double T   = in.t.numerical_value_in(mm);
     const double W   = in.w.numerical_value_in(mm);
 
@@ -378,36 +317,29 @@ auto solve_height(const MicrostripHeightInput& in)
 }
 ```
 
-There is **no** `if (mm) ... else *39.37`. The caller may pass `h` in mils and `w` in mm; mp-units
-reconciles them when it builds the `Input` and again when the caller reads `result.h.in(mils)`. The
-four-method, thirty-two-branch tangle collapses to four short equations. (Numerical note: the
-empirical microstrip formula is defined on ratios of lengths, so we evaluate it in one chosen
-coherent unit — `mm` — to reproduce the original constants exactly. mp-units guarantees we *enter*
-that unit correctly regardless of what the caller supplied.)
+The caller may pass `h` in mils and `w` in mm; mp-units reconciles them when it builds the `Input`
+and again when the caller reads `result.h.in(mils)`. Four short equations, no unit branching.
 
 ---
 
 ## 4. The multi-output pattern
 
-`RectangularEnclosureWidget` returns **12 cavity-resonance frequencies**, one per (m, n, p) mode:
-`f110, f101, f011, f111, f201, f120, f211, f210, f021, f220, f221, f121`. Each is the same equation
+A rectangular enclosure returns **12 cavity-resonance frequencies**, one per (m, n, p) mode. Each is
+the same equation evaluated at a different `(m, n, p)`:
 
 ```text
-f_mnp = (1.5e8 / sqrt(eps_r)) * sqrt( (m/L)^2 + (n/W)^2 + (p/H)^2 )
+f_mnp = (c/2 / sqrt(eps_r)) * sqrt( (m/L)^2 + (n/W)^2 + (p/H)^2 )
 ```
-
-evaluated at a different `(m, n, p)`. The old code writes the formula out **twelve times** by hand
-(lines 62-102), which is twelve chances to fumble a digit.
 
 There are two ways to model "many outputs."
 
 ### Option A — named struct fields (good when the set is fixed and callers want names)
 
-```cpp
+```c++
 struct CavityModeFreq { int m, n, p; quantity<isq::frequency[si::mega<si::hertz>]> f; };
 
 struct RectangularEnclosureResult {
-    std::array<CavityModeFreq, 12> modes;   // ordered exactly as the golden CSV columns
+    std::array<CavityModeFreq, 12> modes;   // ordered to match the reference column order
     // Convenience accessors so call sites can stay readable:
     [[nodiscard]] auto f110() const { return modes[0].f; }
     [[nodiscard]] auto f101() const { return modes[1].f; }
@@ -420,7 +352,7 @@ struct RectangularEnclosureResult {
 Define the 12 modes **once** as data, then compute all of them with **one** formula in a loop. The
 formula appears a single time; adding a mode is adding a row, not copying an equation.
 
-```cpp
+```c++
 // include/emc/shielding/rectangular_enclosure.hpp
 namespace emc::shielding {
 
@@ -435,7 +367,7 @@ struct EnclosureInput {
 
 struct Mode { int m, n, p; };                    // a resonance mode index triple
 
-// The exact 12 modes, in the exact golden-CSV column order, declared ONCE:
+// The 12 modes, in a fixed reference column order, declared ONCE:
 inline constexpr std::array<Mode, 12> kModes{{
     {1,1,0},{1,0,1},{0,1,1},{1,1,1},{2,0,1},{1,2,0},
     {2,1,1},{2,1,0},{0,2,1},{2,2,0},{2,2,1},{1,2,1},
@@ -444,18 +376,18 @@ inline constexpr std::array<Mode, 12> kModes{{
 struct ModeFreq { Mode mode; quantity<isq::frequency[si::mega<si::hertz>]> f; };
 struct EnclosureResult { std::array<ModeFreq, kModes.size()> modes; };
 
-[[nodiscard]] std::expected<void, Error>          validate(const EnclosureInput&);
+[[nodiscard]] std::expected<void, Error>            validate(const EnclosureInput&);
 [[nodiscard]] std::expected<EnclosureResult, Error> calculate(const EnclosureInput&);
 
 } // namespace emc::shielding
 ```
 
-```cpp
+```c++
 // src/shielding/rectangular_enclosure.cpp
 auto calculate(const EnclosureInput& in) -> std::expected<EnclosureResult, Error> {
     if (auto ok = validate(in); !ok) return std::unexpected(ok.error());
 
-    // c/2 in the original constant 1.5e8 m/s, expressed honestly via emc::constants -> doc 04.
+    // c/2, expressed honestly via emc::constants -> doc 04.
     const auto k = emc::constants::c / 2.0 / std::sqrt(in.relative_permittivity.numerical_value_in(one));
     const auto L = in.length, W = in.width, H = in.height;
 
@@ -469,24 +401,25 @@ auto calculate(const EnclosureInput& in) -> std::expected<EnclosureResult, Error
 }
 ```
 
-> **Why a `constexpr` mode table + `std::ranges::transform`, not 12 hand-written lines?**
-> The old file proves the hazard: twelve copies of one formula, each a separate transcription risk,
-> and a 12-way `ui->fXYZ->setValue(...)` block to match. Modeling the *mode set* as data and the
-> *formula* as code means the equation exists once and is impossible to get inconsistent across modes.
-> `std::ranges::transform` over a `constexpr std::array` is allocation-free and (with `constexpr`
-> `<cmath>` and constexpr-friendly mp-units) can even fold at compile time for fixed inputs.
-> `kModes` is also the **single source of column order**, which we reuse directly in the golden test
-> so the CSV and the code can never drift (doc 09).
+> [!TIP]
+> **Modern C++ features used here / and why**
+> * **`constexpr` mode table + `std::ranges::transform`** — modeling the *mode set* as data and the
+>   *formula* as code means the equation exists once and cannot drift across modes. The transform
+>   over a `constexpr std::array` is allocation-free and (with constexpr `<cmath>` and
+>   constexpr-friendly mp-units) can fold at compile time for fixed inputs.
+> * **`kModes` as single source of order** — the same table drives the reference column order in the
+>   golden test, so data and code cannot disagree (doc 09).
 
-> **`std::mdspan` callout.** A few calculators expose genuinely 2-D/3-D grids (e.g. a swept
-> frequency × material table, or microstrip-current distribution over a cross-section). For those,
-> return the data in a flat `std::vector` and hand callers a non-owning `std::mdspan<double,
-> extents<...>>` view for `[i, j]` indexing — no nested `vector<vector<>>`, no manual stride math.
-> The enclosure's 12 fixed modes do **not** need mdspan; a flat `std::array` is simpler and clearer.
-> Reserve mdspan for true multi-dimensional sweeps.
+> [!NOTE]
+> **`std::mdspan` callout.** A few calculators expose genuinely 2-D/3-D grids (a swept
+> frequency × material table, or a current distribution over a cross-section). For those, return the
+> data in a flat `std::vector` and hand callers a non-owning
+> `std::mdspan<double, extents<...>>` view for `[i, j]` indexing — no nested `vector<vector<>>`, no
+> manual stride math. The enclosure's 12 fixed modes do **not** need mdspan; a flat `std::array` is
+> simpler. Reserve mdspan for true multi-dimensional sweeps.
 
-Recommendation: **Option B**. Keep Option A's *named accessors* only where existing UI/tests refer to
-results by name (`f110`), layered on top of the array so both styles work.
+Recommendation: **Option B**, layering Option A's named accessors (`f110`) on top of the array only
+where a caller prefers named access — so both styles work.
 
 ---
 
@@ -494,57 +427,35 @@ results by name (`f110`), layered on top of the array so both styles work.
 
 Every `calculate`/`validate`/`solve_*` is a **pure function**:
 
-* **No state.** No member variables, no `static` locals that mutate, no singletons. Output depends
-  only on the `Input`. (Contrast: the old widgets carry a `ui` pointer and mutate widget state.)
-* **No I/O.** No file reads, no `qDebug`, no dialogs. The library never touches the screen or disk.
-  Presentation and error display are the caller's job. (Contrast: `QMessageBox::warning` and the
-  `TEST_MODE` CSV file writes baked into `MicrostripTraceWidget.cpp`.)
-* **Reentrant / thread-safe by construction.** Because there is no shared mutable state, the same
-  `calculate` can run on N threads over N inputs with zero locking. This is what makes a future
-  `std::execution` / senders batch runner trivial (a C++26 forward-looking note in doc 02).
+* **No state.** No member variables, no mutating `static` locals, no singletons. Output depends only
+  on the `Input`.
+* **No I/O.** No file reads, no logging, no dialogs. The library never touches the screen or disk;
+  presentation and error display are the caller's job.
+* **Reentrant / thread-safe by construction.** With no shared mutable state, the same `calculate`
+  runs on N threads over N inputs with zero locking — which makes a future `std::execution` / senders
+  batch runner trivial (a C++26 forward-looking note in doc 02).
 * **Constants are `constexpr`.** `emc::constants::*` are immutable compile-time values (doc 04), so
-  there is no initialization-order or data-race concern around `mu_0`, `c`, etc. — and no per-file
-  redefinition of `mu0` as in the old `SkinDepthWidget.h`/`FerriteToroidWidget.h`/... .
+  there is no initialization-order or data-race concern around `mu_0`, `c`, etc.
 
 Why this matters concretely:
 
 * **Testing.** A pure `calculate` is tested by calling it with an `Input` and comparing the `Result`
-  — no widget, no event loop, no `ui->solveButton->clicked()`. The 52 golden CSVs become plain
-  data-driven unit tests (doc 09).
-* **Reuse.** The same function serves the Qt desktop app, a future CLI, a batch sweep, a web service
-  — none of which can use a `QWidget`-bound lambda.
-* **Reasoning.** A reviewer can verify one formula in isolation. The old code forces you to read Qt
-  signal wiring to find the math.
+  — no front end, no event loop. The golden tests become plain data-driven unit tests (doc 09).
+* **Reuse.** The same function serves a desktop front end, a CLI, a batch sweep, or a web service.
+* **Reasoning.** A reviewer verifies one formula in isolation.
 
 ---
 
-## 6. Two full worked conversions
+## 6. Two full worked examples
 
 ### 6.A — SkinDepth (simple) — end to end
 
-**Formula:** δ = √( 1 / (π · f · μ · σ) ), with μ = μ₀ · μ_r.
+**Formula:** δ = √( 1 / (π · f · μ · σ) ), with μ = μ₀ · μ_r. This is the standard skin-depth
+relation for a good conductor.
 
-#### BEFORE — the old Qt lambda (verbatim shape)
+#### The complete header
 
-```cpp
-// SkinDepthWidget.cpp 64-72 — math + units + materials + I/O, all fused
-connect(ui->solveButton, &RichButton::clicked, [this]() {
-    qreal frequency = ui->frequency_spinbox->value() * ui->frequencyUnitBox->currentData().toReal();
-    qreal conductivity = ui->conductivity_spinbox->value();
-    qreal relativePermeability = ui->ur->value() * mu0;   // mu0 redefined in SkinDepthWidget.h
-    qreal skinDepth = qSqrt(1 / (M_PI * frequency * relativePermeability * conductivity));
-    ui->skinDepth->setValue(skinDepth / ui->skinDepth_unit->currentData().toReal());
-});
-// material conductivity/permeability hardcoded in a combobox if/else (lines 42-61)
-```
-
-Bugs/smells inherited: `M_PI` (not the project's broken `PI 3.14`, but still ad-hoc); `mu0`
-redefined per file; conductivity values copy-pasted from a 5-way `if/else`; no guard against
-`frequency == 0` (→ divide-by-zero → `inf`); not callable without the widget.
-
-#### AFTER — the complete new header
-
-```cpp
+```c++
 // include/emc/basic/skin_depth.hpp
 #pragma once
 #include <emc/units.hpp>        // doc 03
@@ -557,16 +468,16 @@ namespace emc::basic {
 using namespace mp_units;
 
 struct SkinDepthInput {
-    quantity<isq::frequency[si::hertz]>                              frequency;
+    quantity<isq::frequency[si::hertz]>                             frequency;
     quantity<isq::electrical_conductivity[si::siemens / si::metre]> conductivity;
-    quantity<one>                                                   relative_permeability{1 * one};
+    quantity<one>                                                  relative_permeability{1 * one};
 };
 
 struct SkinDepthResult {
     quantity<isq::length[si::metre]> skin_depth;
 };
 
-[[nodiscard]] std::expected<void, Error>          validate(const SkinDepthInput& in);
+[[nodiscard]] std::expected<void, Error>            validate(const SkinDepthInput& in);
 [[nodiscard]] std::expected<SkinDepthResult, Error> calculate(const SkinDepthInput& in);
 
 // Bind the triple to the concept (section 1e):
@@ -581,9 +492,9 @@ static_assert(emc::ValidatedCalculator<SkinDepth>);
 } // namespace emc::basic
 ```
 
-#### AFTER — the implementation (.cpp)
+#### The implementation (.cpp)
 
-```cpp
+```c++
 // src/basic/skin_depth.cpp
 #include <emc/basic/skin_depth.hpp>
 #include <emc/constants.hpp>    // emc::constants::mu_0, emc::constants::pi  -> doc 04
@@ -606,8 +517,8 @@ std::expected<void, Error> validate(const SkinDepthInput& in) {
 std::expected<SkinDepthResult, Error> calculate(const SkinDepthInput& in) {
     if (auto ok = validate(in); !ok) return std::unexpected(ok.error());
 
-    const auto mu    = in.relative_permeability * emc::constants::mu_0;     // H/m, typed
-    const auto denom = emc::constants::pi * in.frequency * mu * in.conductivity; // -> 1/length^2
+    const auto mu    = in.relative_permeability * emc::constants::mu_0;            // H/m, typed
+    const auto denom = emc::constants::pi * in.frequency * mu * in.conductivity;   // -> 1/length^2
 
     // sqrt of a quantity yields the correctly-dimensioned quantity (length). No bare doubles.
     const auto delta = sqrt(1.0 / denom);
@@ -617,102 +528,85 @@ std::expected<SkinDepthResult, Error> calculate(const SkinDepthInput& in) {
 } // namespace emc::basic
 ```
 
-Notes on the conversion:
+Notes:
 
-* `emc::constants::pi` (full precision) replaces `M_PI`/`PI 3.14`. `emc::constants::mu_0` (one typed
-  source) replaces the per-file `qreal mu0 = 4*M_PI*1e-7`.
+* `emc::constants::pi` (full precision) and `emc::constants::mu_0` (one typed source) replace any
+  ad-hoc per-file constants.
 * The dimensional algebra checks out at compile time: `[H/m]·[Hz]·[S/m] = 1/m²`, so `sqrt(1/denom)`
-  *is* a length. If the formula were wrong dimensionally, it would not compile — a guardrail the old
-  `qreal` math never had.
-* `validate` turns the silent divide-by-zero into an explicit `OutOfRange` error.
+  *is* a length. A dimensionally wrong formula would not compile.
+* `validate` turns a silent divide-by-zero into an explicit `OutOfRange` error.
 * **Material lookup is not the calculator's job.** Conductivity/permeability come from
-  `emc::materials` (doc 04). The caller looks up the material and fills the `Input`:
+  `emc::materials` (doc 04); the caller fills the `Input`:
 
-```cpp
-auto m  = emc::materials::lookup(emc::materials::Material::Nickel); // -> {conductivity, mu_r, ...}
-auto r  = emc::basic::calculate({ .frequency = 27 * MHz,
-                                  .conductivity = m.conductivity,
-                                  .relative_permeability = m.relative_permeability });
+```c++
+auto m = emc::materials::lookup(emc::materials::Material::Nickel); // -> {conductivity, mu_r, ...}
+auto r = emc::basic::calculate({ .frequency             = 27 * MHz,
+                                 .conductivity          = m.conductivity,
+                                 .relative_permeability = m.relative_permeability });
 ```
 
-#### How a Qt widget calls it (the adapter)
+#### Example usage — a generic front end (no GUI toolkit)
 
-```cpp
-connect(ui->solveButton, &RichButton::clicked, [this]() {
-    using namespace mp_units; using namespace mp_units::si::unit_symbols;
-    auto mat = emc::materials::lookup_by_name(ui->material_combobox->currentText().toStdString());
-    if (!mat) { showError(mat.error()); return; }
+```c++
+#include <emc/basic/skin_depth.hpp>
+#include <emc/materials.hpp>
+#include <print>
+using namespace mp_units;
+using namespace mp_units::si::unit_symbols;
+
+void report_skin_depth(double freq_mhz, std::string_view material_name) {
+    auto mat = emc::materials::lookup_by_name(material_name);
+    if (!mat) { std::print("error: {}\n", mat.error().message()); return; }
 
     auto r = emc::basic::calculate({
-        .frequency             = ui->frequency_spinbox->value()
-                               * unitFromBox(ui->frequencyUnitBox),   // returns a frequency quantity
+        .frequency             = freq_mhz * MHz,
         .conductivity          = mat->conductivity,
         .relative_permeability = mat->relative_permeability,
     });
-    if (!r) { showError(r.error()); return; }                          // replaces QMessageBox-in-math
-    ui->skinDepth->setValue(r->skin_depth.numerical_value_in(unitFromBox(ui->skinDepth_unit)));
-});
+    if (!r) { std::print("error: {}\n", r.error().message()); return; }
+
+    std::print("delta = {}\n", r->skin_depth.in(si::micro<si::metre>));
+}
 ```
 
-The widget now contains **zero domain math** — only marshalling. That is the target end state for all
-~52 leaf widgets.
+The front end contains **zero domain math** — only marshalling and rendering. That is the target end
+state for every leaf calculator, whatever the front end happens to be.
 
-#### Golden vector
+#### Tests
 
-`resources/data/SkinDepthWidget.csv` rows are `frequency(MHz),material`, e.g. `27,Nickel`. These feed
-the pure `calculate` directly in a data-driven test (doc 09). **Re-blessing note:** the fixture
-contains the misspelling `Cooper` for `Copper` (e.g. row `84,Cooper`); the materials database must map
-or reject it, and any golden output produced through the old broken constants may need recomputation
-before it is trusted as the reference.
+Drive the pure `calculate` with hand-computed reference values from a textbook closed-form example
+(δ for copper at a known frequency), then layer property checks:
+
+* **Closed-form reference** — for copper at 1 MHz, the standard δ = √(1/(π·f·μ₀·σ)) ≈ 66 µm;
+  assert within tolerance.
+* **Monotonicity** — δ decreases as `frequency` increases and as `conductivity` increases.
+* **Edge / error** — `frequency = 0` returns `OutOfRange`, not `inf`.
+* **constexpr** — if `calculate` is constexpr-evaluable for fixed inputs, `static_assert` a known
+  value.
+
+See [09-testing-and-golden-vectors.md](09-testing-and-golden-vectors.md) for the data-driven harness.
 
 ---
 
 ### 6.B — MicrostripTrace (complex, bidirectional, validated) — end to end
 
-**Formulas** (one rearrangement per unknown), with derived outputs C0 and Tpd for the Z0 case:
+**Formulas** (one rearrangement per unknown), with derived outputs C0 and Tpd for the Z0 case —
+standard closed-form microstrip relations:
 
 ```text
 Z0  = 87 * ln(5.98*H / (0.8*W + T)) / sqrt(eps + 1.41)
-C0  = 0.67 * (eps + 1.41) / ln(5.98*H / (0.8*W + T))                 // pF/cm (or /2.54 for /inch)
-Tpd = C0_temp * Z0                                                    // psec/cm (or /2.54 for /inch)
+C0  = 0.67 * (eps + 1.41) / ln(5.98*H / (0.8*W + T))                 // pF/cm
+Tpd = C0 * Z0                                                         // psec/cm
 H   = exp(Z0*sqrt(eps+1.41)/87) * (0.8*W + T) / 5.98
 T   = 5.98*H / exp(Z0*sqrt(eps+1.41)/87) - 0.8*W
 W   = (5.98*H / exp(Z0*sqrt(eps+1.41)/87) - T) / 0.8
 ```
 
-**Validation domain** (from the old inline checks): `1 ≤ eps ≤ 15`, `0.1 ≤ W/H ≤ 3`, and all of
-`H, W, T, Z0 > 0`.
+**Validation domain:** `1 ≤ eps ≤ 15`, `0.1 ≤ W/H ≤ 3`, and all of `H, W, T, Z0 > 0`.
 
-#### BEFORE — the shape of the old code (one of four near-identical methods)
+#### The header (four typed solvers)
 
-```cpp
-// MicrostripTraceWidget::calH() — 86 lines; the 8 leaves differ ONLY in *39.37 placement
-void MicrostripTraceWidget::calH() {
-    qreal eps, H, T, W, Z, ...;
-    if (ui->hunitRadioMMButton->isChecked()) {
-      if (ui->tunitRadioMMButton->isChecked()) {
-        if (ui->wunitRadioMMButton->isChecked()) {
-            T = ui->t_lineEdit->text().toDouble();          // mm
-            W = ui->w_lineEdit->text().toDouble();          // mm
-            ...
-            H = qExp(hln) * (0.8 * W + T) / 5.98;
-        } else { /* W in mils -> *39.37 ... same formula */ }
-      } else { /* T mils ... */ }
-    } else { /* H mils ... another whole subtree, divides H by 39.37 ... */ }
-    if ((eps < 1) || (eps > 15) || ((W/htemp) < 0.1) || ... ) {
-        QMessageBox::warning(this, "Warning", "Please check your input!");
-        return;
-    } else ui->h_lineEdit->setValue((H*10)/10);
-}
-// calT(), calW(), microstrip() repeat the SAME 8-branch tree with a different equation.
-```
-
-Four methods × eight branches = thirty-two leaves of pure unit plumbing wrapped around four
-one-line equations, plus four copies of the same validation block ending in `QMessageBox`.
-
-#### AFTER — the header (four typed solvers)
-
-```cpp
+```c++
 // include/emc/component/microstrip_trace.hpp
 #pragma once
 #include <emc/units.hpp>
@@ -781,13 +675,12 @@ static_assert(emc::ValidatedCalculator<MicrostripImpedance>);
 } // namespace emc::component
 ```
 
-Notice what is *gone from the type system itself*: `solve_height`'s input has **no `h` field**. You
-cannot ask to solve for height and accidentally also pass a height. The 8-branch unit tree is gone
-because units live in the quantities.
+`solve_height`'s input has **no `h` field**: you cannot ask to solve for height and accidentally also
+pass a height. Units live in the quantities, so there is no unit-branching plumbing anywhere.
 
-#### AFTER — the implementation (.cpp)
+#### The implementation (.cpp)
 
-```cpp
+```c++
 // src/component/microstrip_trace.cpp
 #include <emc/component/microstrip_trace.hpp>
 #include <cmath>
@@ -798,7 +691,7 @@ using namespace mp_units;
 using mp_units::si::unit_symbols::mm;
 
 namespace {
-// Shared domain check (replaces the four copy-pasted validation blocks + QMessageBox).
+// Shared domain check, used by every solver.
 std::expected<void, Error> check_domain(double eps, double H_mm, double T_mm,
                                         double W_mm, double Z_ohm) {
     if (eps < 1.0 || eps > 15.0)
@@ -881,79 +774,79 @@ solve_width(const MicrostripWidthInput& in) {
 } // namespace emc::component
 ```
 
-What the conversion accomplishes, point by point:
+What this design buys, point by point:
 
-* **32 unit branches → 0.** Each `.numerical_value_in(mm)` pulls the value into the formula's chosen
-  unit regardless of what the caller supplied (mm, mils, inches). The old `* 39.37` and the
-  `if (...MMButton->isChecked())` ladders are deleted entirely (doc 03).
-* **4 copies of validation → 1 `check_domain`.** And it returns an `Error`, not a `QMessageBox` —
-  the math no longer talks to the GUI (doc 05).
+* **No unit branching.** Each `.numerical_value_in(mm)` pulls the value into the formula's chosen
+  unit regardless of what the caller supplied (mm, mils, inches).
+* **One `check_domain`, not four copies.** It returns an `Error`; the math never talks to a front end.
 * **The unknown is encoded in the types.** `solve_width` cannot be called with a width; `solve_height`
   cannot be called without `z0`. Whole classes of "wrong field set" bugs are unrepresentable.
 * **Per-length outputs carry their dimension.** `c0` and `tpd` are real per-length quantities; the
-  caller chooses `pF/cm` vs `pF/inch` at render time, which replaces the
-  `if (!ui->c0PfcmradioButton->isChecked()) ... /2.54` branching.
+  caller chooses `pF/cm` vs `pF/inch` at render time.
 
-#### How a Qt widget calls it (bidirectional adapter)
+#### Example usage — a generic bidirectional front end
 
-```cpp
-// The UI's four buttons map to the four solvers. The library does not know about radio buttons.
-connect(ui->h_button, &QPushButton::clicked, [this]() {
-    using namespace mp_units; using namespace mp_units::si::unit_symbols;
+```c++
+// A front end maps each "solve" action to the matching solver. The library knows nothing about it.
+#include <emc/component/microstrip_trace.hpp>
+#include <print>
+using namespace mp_units;
+using namespace mp_units::si::unit_symbols;
+
+void report_height(double z0_ohm, double t_mm, double w_mm, double eps) {
     auto r = emc::component::solve_height({
-        .z0 = ui->z0_lineEdit->value() * ohm,
-        .t  = ui->t_lineEdit->value()  * lengthUnit(ui->tunitRadioMMButton),   // mm or mils
-        .w  = ui->w_lineEdit->value()  * lengthUnit(ui->wunitRadioMMButton),
-        .relative_permittivity = ui->permittivity_LineEdit->value() * one,
+        .z0                    = z0_ohm * ohm,
+        .t                     = t_mm * mm,
+        .w                     = w_mm * mm,
+        .relative_permittivity = eps * one,
     });
-    if (!r) { showError(r.error()); return; }     // one error path, no inline QMessageBox in math
-    ui->h_lineEdit->setValue(r->h.numerical_value_in(lengthUnit(ui->hunitRadioMMButton)));
-});
-// z0_button -> solve_impedance, t_button -> solve_thickness, w_button -> solve_width (same shape).
+    if (!r) { std::print("error: {}\n", r.error().message()); return; }   // one error path
+    std::print("H = {}\n", r->h.in(mm));
+}
+// z0 -> solve_impedance, t -> solve_thickness, w -> solve_width (same shape).
 ```
 
-#### Golden vector
+#### Tests
 
-`resources/data/MicrostripTraceWidget.csv` rows are `h,t,w,relativePermittivity` (mm), e.g.
-`18.65392418,11.15918402,15.00320319,5`, with the golden output columns
-`Z0, C0(pF/cm), Tpd(psec/cm)` — these exercise `solve_impedance`. Reverse rows (where one geometry
-value is omitted and `z0` is given) exercise `solve_height/thickness/width`. See doc 09 for the
-data-driven harness; rows that violate `W/H ∈ [0.1,3]` should be asserted to return `OutOfRange`
-rather than a number.
+Use hand-computed reference values plus structural checks:
+
+* **Closed-form reference** — pick a geometry inside the domain, compute Z0, C0, Tpd by hand from
+  the formulas above, and assert `solve_impedance` matches within tolerance.
+* **Round-trip** — `solve_impedance` then `solve_height` (feeding back the computed Z0 and the other
+  two geometry values) must recover the original `h`; likewise for thickness and width.
+* **Domain / error** — a row with `W/H ∉ [0.1, 3]` or `eps ∉ [1, 15]` must return `OutOfRange`
+  rather than a number.
+* **Type-level** — `static_assert(emc::ValidatedCalculator<MicrostripImpedance>)` already guards the
+  contract at compile time.
 
 ---
 
-## 7. Implementer checklist — convert any one calculator
+## 7. Implementer checklist — build any one calculator
 
-Follow these steps in order for each of the ~52 leaves. This is the procedure
-[10-migration-roadmap.md](10-migration-roadmap.md) sequences and tracks.
+Follow these steps for each leaf. This is the procedure [10-build-roadmap.md](10-build-roadmap.md)
+sequences and tracks.
 
-1. **Locate the formula.** Open the source widget `.cpp` listed in
-   [07-calculator-inventory.md](07-calculator-inventory.md). Find the `clicked` lambda or `cal*`
-   method. Copy out the raw equation(s) and note every magic constant, `* factor` unit conversion,
-   inline `if/else` material table, and `QMessageBox` range check.
+1. **State the formula.** Write the closed-form equation(s) from the EMC reference, and note every
+   constant and the input/output unit conventions.
 
 2. **Pick the namespace & files.** Place it in the right category namespace
    (`emc::basic`/`component`/`shielding`/...). Create `include/emc/<category>/<name>.hpp` and
    `src/<category>/<name>.cpp`.
 
-3. **Define `Input`.** One mp-units-typed field per independent variable, in a natural order. Add
-   `{default}` only for fields with an obvious neutral value (relative permeability `1`, relative
-   permittivity a common substrate value). No defaults on the required physical inputs. Map each old
-   `ui->...->value() * factor` to a typed quantity (doc 03 for the unit vocabulary).
+3. **Define `Input`.** One mp-units-typed field per independent variable, in a natural order. Add a
+   `{default}` only for fields with an obvious neutral value (relative permeability `1`, a common
+   substrate permittivity). No defaults on the required physical inputs (doc 03 for the unit
+   vocabulary).
 
 4. **Define `Result`.** One mp-units-typed field per output. For multi-output, prefer a `constexpr`
    index table + `std::array` (section 4). Do **not** bake in a display unit.
 
-5. **Port the math** into `calculate` (or `solve_*` for bidirectional). Replace:
-   `M_PI`/`PI 3.14` → `emc::constants::pi`; `mu0`/`SPEEDOFLIGHT`/`PLANCK_CONSTANT` →
-   `emc::constants::*` (doc 04); inline material tables → `emc::materials::lookup` (doc 04);
-   `* 39.37` and `addItem(unit,factor)` scaling → `.numerical_value_in(unit)` / quantity literals
-   (doc 03). Evaluate empirical (dimensionless-ratio) formulas in one chosen coherent unit to
-   reproduce the original constants exactly.
+5. **Write the math** in `calculate` (or `solve_*` for bidirectional), using `emc::constants::*`
+   (doc 04) for π, μ₀, c, etc., and `emc::materials::lookup` (doc 04) for material properties.
+   Evaluate empirical (dimensionless-ratio) formulas in one chosen coherent unit to reproduce the
+   standard constants exactly.
 
-6. **Add `validate`.** Translate every `QMessageBox::warning(...)` range check and every
-   `EXIT_FAILURE` sentinel into `return std::unexpected(Error{ErrorCode::OutOfRange, "..."})`.
+6. **Add `validate`.** Encode the physical domain as `return std::unexpected(Error{ErrorCode::OutOfRange, "..."})`.
    Guard divide-by-zero / domain-of-log / domain-of-sqrt explicitly. Call `validate` first inside
    `calculate` (doc 05).
 
@@ -961,36 +854,28 @@ Follow these steps in order for each of the ~52 leaves. This is the procedure
    static validate; };` and `static_assert(emc::Calculator<Name>)` (or `ValidatedCalculator`) in the
    header. Fix any mismatch the assert reports.
 
-8. **Wire the golden CSV test.** Point a data-driven test at
-   `resources/data/<Widget>.csv`, parse the input columns into the `Input`, run `calculate`, and
-   compare each output column within tolerance (doc 09). Mark rows that must error as expected
-   `OutOfRange`. **Re-bless** any golden output that the old code computed through a known bug
-   (`PI 3.14`, imprecise `SPEEDOFLIGHT`) and record the change.
+8. **Write the tests.** Derive expected values from hand computation or a textbook closed-form
+   example; add round-trip / property / monotonicity / edge / constexpr checks; assert that
+   out-of-domain inputs return `OutOfRange` (doc 09).
 
-9. **(Optional) Add the widget adapter.** Once the app is being rewired (doc 08), replace the old
-   lambda body with the marshalling adapter (sections 6.A/6.B): read fields → build `Input` → call
-   `calculate` → render `Result` or `showError(error)`. The widget must contain **no domain math**.
+9. **(Optional) Add a front-end adapter.** A generic front end reads fields → builds `Input` → calls
+   `calculate` → renders `Result` or reports `error`. The front end must contain **no domain math**.
 
-10. **Done criteria.** The calculator compiles with the `static_assert` passing, the golden test is
-    green (or intentionally re-blessed), `calculate`/`validate` are pure (no I/O, no globals), and no
-    `M_PI`/`mu0`/`* 39.37`/`QMessageBox` remains in the ported math.
+10. **Done criteria.** Compiles with the `static_assert` passing, tests green,
+    `calculate`/`validate` are pure (no I/O, no globals).
 
 ---
 
 ## Cross-references
 
-* [00-overview-and-goals.md](00-overview-and-goals.md) — vision, before/after, success criteria.
-* [01-architecture-and-layout.md](01-architecture-and-layout.md) — namespaces, directory/lib layout.
 * [02-modern-cpp-feature-catalog.md](02-modern-cpp-feature-catalog.md) — concepts, `std::expected`,
   designated initializers, ranges, mdspan rationale in depth.
-* [03-quantities-and-units-mp-units.md](03-quantities-and-units-mp-units.md) — the mp-units vocabulary
-  that types the `Input`/`Result` fields and deletes the 541 unit conversions.
+* [03-quantities-and-units-mp-units.md](03-quantities-and-units-mp-units.md) — the mp-units
+  vocabulary that types the `Input`/`Result` fields.
 * [04-constants-and-material-database.md](04-constants-and-material-database.md) — `emc::constants::*`
   and `emc::materials::*` used inside every `calculate`.
 * [05-error-handling-and-validation.md](05-error-handling-and-validation.md) — `emc::Error`,
   `ErrorCode`, and the `std::expected` conventions used by `validate`/`calculate`.
-* [07-calculator-inventory.md](07-calculator-inventory.md) — the full ~52-calculator work-list that
-  applies this pattern.
+* [07-calculator-inventory.md](07-calculator-inventory.md) — the full ~52-calculator work-list.
 * [09-testing-and-golden-vectors.md](09-testing-and-golden-vectors.md) — the generic
-  `template <emc::Calculator C>` golden-CSV harness this pattern enables.
-* [10-migration-roadmap.md](10-migration-roadmap.md) — phasing that reuses the section 7 checklist.
+  `template <emc::Calculator C>` golden-vector harness this pattern enables.

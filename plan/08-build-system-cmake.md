@@ -1,73 +1,39 @@
-# Build System (Modern CMake, Compiled Library)
+# Build System (Modern CMake, Compiled Library) ⚙️
 
-> Purpose: specify the complete CMake build for the Qt-free `emc` library as a **traditional compiled
-> library** (static and/or shared) named `emc` exporting the alias `emc::emc`, including dependency
-> acquisition (mp-units), shared-library symbol visibility, install/export and package config so
-> downstream code can `find_package(emc)`, presets, quality tooling, and how the existing Qt app rewires
-> onto it.
+> Purpose: specify the complete CMake build for the `emc` library as a **traditional compiled library**
+> (static and/or shared) named `emc` exporting the alias `emc::emc`, including dependency acquisition
+> (mp-units), shared-library symbol visibility, install/export and package config so downstream code can
+> `find_package(emc)`, presets, and quality tooling.
 
 ---
 
 ## 0. Reading this document
 
-This is the *mechanical* document. It tells you exactly what CMake to write so that the structure
-defined in `01-architecture-and-layout.md` (Foundation / Domain / Facade layers, the `emc::*`
-namespaces) and the dependencies defined in `03-quantities-and-units-mp-units.md` (mp-units) and
-`05-error-handling-and-validation.md` (`std::expected`, C++23) actually compile, install, and are
-consumable.
+This is the *mechanical* document: exactly what CMake to write so that the layer structure of
+`01-architecture-and-layout.md` (Foundation / Domain / Facade, the `emc::*` namespaces), the units layer
+of `03-quantities-and-units-mp-units.md` (mp-units), and the error model of
+`05-error-handling-and-validation.md` (`std::expected`, C++23) compile, install, and are consumable.
 
 Locked decisions this document obeys:
 
-- **C++23 baseline** — `target_compile_features(emc PUBLIC cxx_std_23)`; no `CMAKE_CXX_STANDARD`
-  global, no compiler-specific `-std=` strings.
-- **Compiled library, not header-only, not modules-first** — public headers in `include/emc/`,
-  compiled translation units in `src/`, built into a real `add_library(emc ...)` target with
-  `install()`/`export()` and a generated package config. A short callout (§11) notes C++20 modules as a
-  *future* option only.
+- **C++23 baseline** — `target_compile_features(emc PUBLIC cxx_std_23)`; no global `CMAKE_CXX_STANDARD`,
+  no compiler-specific `-std=` strings.
+- **Compiled library, not header-only, not modules-first** — public headers in `include/emc/`, compiled
+  translation units in `src/`, built into a real `add_library(emc ...)` target with `install()`/`export()`
+  and a generated package config. §11 notes C++20 modules as a *future* option only.
 - **mp-units is the units layer** — pulled with `find_package(mp-units CONFIG)` and a `FetchContent`
   fallback, propagated `PUBLIC` because it appears in `emc`'s public headers (every quantity type).
-- **No Qt anywhere in the library build** — there is deliberately no `find_package(Qt6)` in this
-  project. A CI grep gate (§9.4) enforces it.
+- **GUI-free library build** — there is deliberately no UI toolkit anywhere in this project. A CI grep
+  gate (§9.1) enforces it.
+
+> [!IMPORTANT]
+> Two design choices below are non-obvious and load-bearing: sources are listed **explicitly** (not
+> globbed), and the C++23 requirement is a **`PUBLIC` usage requirement** on the target. Both are
+> explained inline at §1.1.
 
 ---
 
-## 1. What changes versus the old build (contrast)
-
-The source app's `CMakeLists.txt` (`/Users/sufuk/CLionProjects/emc-prediction/CMakeLists.txt`) is a
-single 216-line file whose every pathology is a thing this plan removes. A side-by-side:
-
-| Old `NinjaEMC` `CMakeLists.txt`                                                         | New `emc` build                                                                  |
-|----------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
-| `cmake_minimum_required(VERSION 3.16)`                                                  | `cmake_minimum_required(VERSION 3.28)` (good C++23 + clean `import std` story)    |
-| `set(CMAKE_CXX_STANDARD 20)` global mutable var                                         | `target_compile_features(emc PUBLIC cxx_std_23)` (requirement *propagates*)       |
-| `CMAKE_AUTOUIC/AUTOMOC/AUTORCC ON`                                                      | gone — no Qt, no moc, no `.ui`, no `.qrc`                                          |
-| Hard-coded per-OS `find_path(Qt5_DIR PATHS E:/Qt/...)` (lines 28–134)                   | gone — no absolute machine paths; deps via `find_package`/`FetchContent`          |
-| `find_package(Qt6 COMPONENTS Widgets Gui Core Svg ...)`                                 | `find_package(mp-units CONFIG)` only                                              |
-| `file(GLOB_RECURSE SOURCE_FILES src/*.cpp)`                                             | explicit `target_sources(emc PRIVATE src/...)` (GLOB does not re-trigger CMake)   |
-| `add_executable(NinjaEMC ...)`                                                          | `add_library(emc ...)` + `add_library(emc::emc ALIAS emc)`                        |
-| `target_include_directories(... PUBLIC ${header_dir_list})` (every header dir exposed)  | one public root via `$<BUILD_INTERFACE>`/`$<INSTALL_INTERFACE>`                    |
-| `add_compile_definitions(TEST_MODE)` toggling in-widget CSV harness                     | tests are a separate target; goldens consumed by tests, not the lib (doc 09)      |
-| no `install()`, no `export()`, no package config                                        | full `install(TARGETS ... EXPORT)` + `emcConfig.cmake` so `find_package(emc)`     |
-| no warnings flags, no sanitizers, no presets                                            | `-Wall -Wextra -Wpedantic -Werror`, ASan/UBSan preset, `CMakePresets.json`        |
-
-Two of these matter enough to call out explicitly:
-
-**`GLOB_RECURSE` is removed on purpose.** The old build globs `src/*.cpp`. CMake evaluates the glob
-*once* at configure time; adding a new calculator `.cpp` does **not** re-run CMake, so the new file is
-silently not built until someone manually reconfigures. For a library where the work-list (doc 07) adds
-~52 calculators incrementally, that is a footgun. We list sources explicitly via `target_sources`.
-(`CONFIGURE_DEPENDS` exists, but it is best-effort, slows every build, and is discouraged for installed
-libraries — explicit lists are the documented recommendation.)
-
-**`CMAKE_CXX_STANDARD 20` global is removed on purpose.** A global variable does not travel with the
-target; a consumer linking `emc::emc` would not automatically get C++23 turned on. Because `emc`'s
-public headers *require* C++23 (they use `std::expected`, `std::format`, mp-units' deducing-this), the
-requirement must be a `PUBLIC` *usage requirement* on the target (`target_compile_features(... PUBLIC
-cxx_std_23)`), which propagates to every consumer transitively.
-
----
-
-## 2. Top-level `CMakeLists.txt`
+## 1. Top-level `CMakeLists.txt`
 
 ```cmake
 cmake_minimum_required(VERSION 3.28)
@@ -79,17 +45,17 @@ cmake_minimum_required(VERSION 3.28)
 
 project(emc
     VERSION 0.1.0
-    DESCRIPTION "Qt-free modern-C++ EMC engineering calculation library"
+    DESCRIPTION "Modern-C++ EMC engineering calculation library"
     HOMEPAGE_URL "https://github.com/sufuk/emcpp"
     LANGUAGES CXX)
 
 # ---- Project-level guard rails -------------------------------------------------------------
-# Refuse in-source builds (the old app built straight into the source tree).
+# Refuse in-source builds.
 if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
     message(FATAL_ERROR "In-source builds are not allowed. Use a build/ directory or a preset.")
 endif()
 
-# Generate compile_commands.json for clang-tidy / clangd / IDEs (see §9.3).
+# Generate compile_commands.json for clang-tidy / clangd / IDEs (see §7.3).
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Default visibility hidden so the shared lib only exports what EMC_API marks (see §3).
@@ -111,17 +77,17 @@ option(EMC_WARNINGS_AS_ERRORS "Treat warnings as errors"    ${PROJECT_IS_TOP_LEV
 
 include(GNUInstallDirs)   # CMAKE_INSTALL_{LIBDIR,INCLUDEDIR,BINDIR,...}
 
-# ---- Dependencies (see §2 detail in §2.1 below) --------------------------------------------
+# ---- Dependencies (see §2) -----------------------------------------------------------------
 include(cmake/Dependencies.cmake)   # brings in mp-units (+ test deps when EMC_BUILD_TESTS)
 
 # ---- The library target --------------------------------------------------------------------
 add_library(emc)            # STATIC or SHARED chosen by BUILD_SHARED_LIBS
 add_library(emc::emc ALIAS emc)   # consumers always say emc::emc, never bare emc
 
-# C++23 as a PUBLIC usage requirement (propagates to consumers — see §1).
+# C++23 as a PUBLIC usage requirement (propagates to consumers — see §1.1).
 target_compile_features(emc PUBLIC cxx_std_23)
 
-# Explicit source list (NOT glob — see §1). Grouped to mirror doc 01's layer/category layout.
+# Explicit source list (NOT glob — see §1.1). Grouped to mirror doc 01's layer/category layout.
 target_sources(emc PRIVATE
     # Foundation layer
     src/error.cpp
@@ -153,11 +119,11 @@ target_include_directories(emc
         $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
 )
 
-# mp-units is in emc's PUBLIC headers (every quantity type) -> PUBLIC link (see §2.1).
+# mp-units is in emc's PUBLIC headers (every quantity type) -> PUBLIC link (see §2).
 target_link_libraries(emc PUBLIC mp-units::mp-units)
 
 # Warnings & version/soname metadata.
-include(cmake/CompilerWarnings.cmake)   # sets up the -Wall -Wextra ... interface lib (see §9)
+include(cmake/CompilerWarnings.cmake)   # sets up the -Wall -Wextra ... interface lib (see §7)
 target_link_libraries(emc PRIVATE emc_project_warnings)
 
 set_target_properties(emc PROPERTIES
@@ -188,31 +154,52 @@ endif()
 include(cmake/Install.cmake)
 ```
 
-### 2.1 Notes on the snippet
+### 1.1 Notes on the snippet
 
 - **`add_library(emc)` with no `STATIC`/`SHARED`** lets `BUILD_SHARED_LIBS` decide. The plan supports
-  both (the user asked for "static and/or shared"); a consumer or packager flips one cache var. Because
-  visibility is default-hidden + `EMC_API` (see §3), the *static* build behaves identically and the
-  *shared* build exports a clean, minimal symbol set.
+  both (static and/or shared); a consumer or packager flips one cache var. Because visibility is
+  default-hidden + `EMC_API` (§3), the *static* build behaves identically and the *shared* build exports a
+  clean, minimal symbol set.
 - **`emc::emc` alias** is created at configure time so in-tree examples/tests link the same name a
-  downstream `find_package(emc)` consumer uses. This means `examples/` code is byte-for-byte the same
-  whether built in-tree or against the installed package — a cheap correctness check.
-- **`mp-units::mp-units` is `PUBLIC`**, not `PRIVATE`. Every public `emc` header includes mp-units
-  types in function signatures (e.g. `quantity<isq::frequency[si::hertz]>`), so consumers need
-  mp-units' include dirs and compile flags transitively. `PUBLIC` propagates them; `PRIVATE` would
-  compile `emc` but break every consumer with "mp-units/... not found". This is also why the package
-  config must `find_dependency(mp-units)` (§4).
+  downstream `find_package(emc)` consumer uses — making `examples/` byte-for-byte identical in-tree or
+  against the installed package, a cheap correctness check.
+- **`mp-units::mp-units` is `PUBLIC`**, not `PRIVATE`. Every public `emc` header puts mp-units types in
+  function signatures (e.g. `quantity<isq::frequency[si::hertz]>`), so consumers need mp-units' include
+  dirs and compile flags transitively. `PUBLIC` propagates them; `PRIVATE` would compile `emc` but break
+  every consumer with "mp-units/... not found". This is also why the package config must
+  `find_dependency(mp-units)` (§4).
+- **No `GLOB_RECURSE`.** CMake evaluates a glob *once* at configure time, so adding a new calculator
+  `.cpp` would not re-run CMake and the file would silently not build until someone reconfigures. The
+  doc-07 work-list adds ~52 calculators incrementally, so sources are listed explicitly via
+  `target_sources`. (`CONFIGURE_DEPENDS` exists but is best-effort, slows every build, and is discouraged
+  for installed libraries.)
+- **C++23 is a `PUBLIC` usage requirement, not a global.** A global `CMAKE_CXX_STANDARD` does not travel
+  with the target — a consumer linking `emc::emc` would not get C++23. Because `emc`'s public headers
+  *require* C++23 (`std::expected`, `std::format`, mp-units' deducing-this), the requirement is a `PUBLIC`
+  `target_compile_features`, which propagates to every consumer transitively.
 - **`PROJECT_IS_TOP_LEVEL`** (CMake ≥ 3.21) drives test/example defaults: ON when `emc` is the root
-  project, OFF when it is pulled in via `add_subdirectory`/`FetchContent` by the Qt app — so consuming
-  the library does not drag in its tests.
+  project, OFF when pulled in via `add_subdirectory`/`FetchContent` — so consuming the library does not
+  drag in its tests.
+
+> ### Modern C++ features used here / and why
+>
+> - **`target_compile_features(... PUBLIC cxx_std_23)`** — `emc`'s public API exposes `std::expected`,
+>   `std::format`, and mp-units' deducing-this in header signatures, so the C++23 requirement is part of
+>   the *contract*; making it a `PUBLIC` usage requirement guarantees every consumer compiles in the same
+>   language mode the headers were written for.
+> - **Generator expressions (`$<BUILD_INTERFACE>` / `$<INSTALL_INTERFACE>`)** — the include root differs
+>   between the build tree and the install tree; generator expressions encode both in one target so the
+>   same `emc::emc` works whether linked in-tree or via `find_package`.
+> - **`BUILD_SHARED_LIBS`-driven `add_library(emc)`** — leaving the library kind unspecified lets one
+>   cache variable select static or shared, which combined with default-hidden visibility yields identical
+>   public behavior in both modes from a single source tree.
 
 ---
 
-## 3. Dependencies (`cmake/Dependencies.cmake`)
+## 2. Dependencies (`cmake/Dependencies.cmake`)
 
-Pattern: prefer a system/`find_package` copy; fall back to `FetchContent` so a clean checkout builds
-with zero manual setup. This is the modern "find-or-fetch" idiom and replaces the old build's hard-coded
-`find_path(Qt5_DIR PATHS E:/Qt/5.15.2/...)` machine-specific paths entirely.
+Pattern: prefer a system/`find_package` copy; fall back to `FetchContent` so a clean checkout builds with
+zero manual setup. This is the modern "find-or-fetch" idiom.
 
 ```cmake
 # cmake/Dependencies.cmake
@@ -274,25 +261,26 @@ if(EMC_USE_MAGIC_ENUM)
 endif()
 ```
 
-> **PUBLIC vs PRIVATE rule of thumb for this project:** a dependency goes `PUBLIC` iff it appears in a
-> public header under `include/emc/`. mp-units → `PUBLIC` (quantity types in every signature). Catch2 →
-> test target only. magic_enum → `PRIVATE` (used only inside `.cpp` parse helpers). This rule is what
-> keeps the package config's `find_dependency` list minimal and correct.
+> [!NOTE]
+> **PUBLIC vs PRIVATE rule of thumb:** a dependency goes `PUBLIC` iff it appears in a public header under
+> `include/emc/`. mp-units → `PUBLIC` (quantity types in every signature). Catch2 → test target only.
+> magic_enum → `PRIVATE` (used only inside `.cpp` parse helpers). This rule keeps the package config's
+> `find_dependency` list minimal and correct.
 
 ---
 
-## 4. Shared-library symbol visibility (`include/emc/export.hpp`)
+## 3. Shared-library symbol visibility (`include/emc/export.hpp`)
 
-A shared `emc` defaults to **hidden** visibility (set in §2: `CMAKE_CXX_VISIBILITY_PRESET hidden` +
+A shared `emc` defaults to **hidden** visibility (set in §1: `CMAKE_CXX_VISIBILITY_PRESET hidden` +
 `VISIBILITY_INLINES_HIDDEN`). Only symbols explicitly marked `EMC_API` are exported. This is the modern
 default-hidden discipline: smaller export tables, faster load, no accidental ABI surface, and it makes
 Windows (`__declspec(dllexport/dllimport)`) and ELF/Mach-O (`__attribute__((visibility("default")))`)
 behave identically from one macro.
 
-We generate the macro with `generate_export_header` (called in §2), which writes
-`include/emc/export.hpp` in the build tree. Generated content is equivalent to:
+We generate the macro with `generate_export_header` (called in §1), which writes `include/emc/export.hpp`
+in the build tree. Generated content is equivalent to:
 
-```cpp
+```c++
 // include/emc/export.hpp  (generated by generate_export_header)
 #ifndef EMC_API_H
 #define EMC_API_H
@@ -328,18 +316,17 @@ We generate the macro with `generate_export_header` (called in §2), which write
 #endif /* EMC_API_H */
 ```
 
-(For a static build CMake compiles with `-DEMC_STATIC_DEFINE`, so `EMC_API` expands to nothing — the
-exact same source works in both modes. We add `EMC_STATIC_DEFINE` to the static target's
-`COMPILE_DEFINITIONS` in `Install.cmake` / the static branch.)
+For a static build CMake compiles with `-DEMC_STATIC_DEFINE`, so `EMC_API` expands to nothing — the exact
+same source works in both modes.
 
-### 4.1 Where `EMC_API` goes (and where it must NOT)
+### 3.1 Where `EMC_API` goes (and where it must NOT)
 
 Most of `emc` is templates and `constexpr`, which are **header-only and must NOT carry `EMC_API`** —
 exporting a template instantiation is meaningless and on MSVC actively wrong. Mark only the
-**non-template, non-inline functions that are compiled in `src/*.cpp`** — chiefly the few runtime
-boundary helpers (string→quantity parsing, the material lookup, error-message formatting):
+**non-template, non-inline functions compiled in `src/*.cpp`** — chiefly the few runtime boundary helpers
+(string→quantity parsing, material lookup, error-message formatting):
 
-```cpp
+```c++
 // include/emc/units/parse.hpp
 #include <emc/export.hpp>
 #include <emc/error.hpp>
@@ -355,7 +342,7 @@ parse_length(std::string_view text);
 }  // namespace emc::units
 ```
 
-```cpp
+```c++
 // include/emc/basic/skin_depth.hpp  -- a pure calculator: NO EMC_API.
 // calculate() is constexpr/inline and header-resolved; nothing to export.
 namespace emc::basic {
@@ -369,17 +356,24 @@ calculate(const SkinDepthInput& in) noexcept;   // no EMC_API: header-only
 }  // namespace emc::basic
 ```
 
-> **Why default-hidden + a generated macro instead of the old "export everything" default:** the source
-> app never built a library, so it never faced this — but its `target_include_directories(... PUBLIC
-> ${header_dir_list})` exposed *every* header directory as public API. Default-hidden visibility is the
-> library-shaped equivalent of "expose only what you mean to": the public surface is exactly the set of
-> `EMC_API`-marked functions plus the header-only calculators, nothing else.
+> [!TIP]
+> Default-hidden visibility is the library-shaped equivalent of "expose only what you mean to": the public
+> surface is exactly the set of `EMC_API`-marked functions plus the header-only calculators, nothing else.
+
+> ### Modern C++ features used here / and why
+>
+> - **`constexpr` calculators in headers (no `EMC_API`)** — EMC formulas are pure numeric functions over
+>   physical quantities, so making `calculate()` `constexpr` lets call sites fold known inputs at compile
+>   time and keeps those functions out of the exported ABI entirely.
+> - **`[[nodiscard]] std::expected<Result, Error>`** — calculator inputs have physical domains, so
+>   `std::expected` reports an out-of-domain input as a recoverable typed error the caller cannot silently
+>   ignore, with no exceptions crossing the shared-library boundary.
 
 ---
 
-## 5. Install & package config (`cmake/Install.cmake` + `cmake/emcConfig.cmake.in`)
+## 4. Install & package config (`cmake/Install.cmake` + `cmake/emcConfig.cmake.in`)
 
-The goal: after `cmake --install`, a completely separate project does
+Goal: after `cmake --install`, a completely separate project does
 
 ```cmake
 find_package(emc 0.1 REQUIRED)
@@ -393,7 +387,7 @@ manual include/link flags.
 # cmake/Install.cmake
 include(CMakePackageConfigHelpers)
 
-# 1. Install the library + record it in an export set, attaching include dirs from §2.
+# 1. Install the library + record it in an export set, attaching include dirs from §1.
 install(TARGETS emc emc_project_warnings
     EXPORT emcTargets
     LIBRARY     DESTINATION ${CMAKE_INSTALL_LIBDIR}      # .so / .dylib
@@ -441,9 +435,9 @@ export(EXPORT emcTargets
     FILE ${CMAKE_CURRENT_BINARY_DIR}/emcTargets.cmake)
 ```
 
-The package config template — **must re-find mp-units**, because `emc::emc` carries a `PUBLIC` link to
-`mp-units::mp-units`; without re-finding it, the consumer's `find_package(emc)` succeeds but the link
-step explodes on the missing imported target:
+The package config template **must re-find mp-units**, because `emc::emc` carries a `PUBLIC` link to
+`mp-units::mp-units`; without re-finding it, the consumer's `find_package(emc)` succeeds but the link step
+explodes on the missing imported target:
 
 ```cmake
 # cmake/emcConfig.cmake.in
@@ -459,10 +453,10 @@ include("${CMAKE_CURRENT_LIST_DIR}/emcTargets.cmake")
 check_required_components(emc)
 ```
 
-> **Why `find_dependency` and not `find_package` in the config:** `find_dependency` forwards `REQUIRED`
-> / `QUIET` / version from the outer `find_package(emc ...)` call, and fails the whole lookup cleanly if
-> mp-units is missing — the right propagation semantics for a transitive public dependency. This is the
-> mechanical realization of doc 03's note that "mp-units propagates `PUBLIC`."
+> [!WARNING]
+> Use `find_dependency`, not `find_package`, in the config. `find_dependency` forwards `REQUIRED` /
+> `QUIET` / version from the outer `find_package(emc ...)` call and fails the whole lookup cleanly if
+> mp-units is missing — the correct propagation semantics for a transitive public dependency.
 
 After install the layout is:
 
@@ -479,11 +473,10 @@ After install the layout is:
 
 ---
 
-## 6. `CMakePresets.json`
+## 5. `CMakePresets.json`
 
-Presets pin generator, build dir, flags and the warnings/sanitizer policy so every developer and CI
-runner configures identically — replacing the old habit of remembering ad-hoc `-D` flags. Schema v6
-(CMake ≥ 3.28).
+Presets pin generator, build dir, flags, and the warnings/sanitizer policy so every developer and CI
+runner configures identically. Schema v6 (CMake ≥ 3.28).
 
 ```json
 {
@@ -553,9 +546,9 @@ runner configures identically — replacing the old habit of remembering ad-hoc 
 }
 ```
 
-Usage:
+### Example usage
 
-```text
+```bash
 cmake --preset debug
 cmake --build --preset debug
 ctest --preset debug
@@ -563,20 +556,21 @@ ctest --preset debug
 cmake --preset asan && cmake --build --preset asan && ctest --preset asan
 ```
 
-> ASan/UBSan is high-value here precisely because the formulas use `std::pow`, `std::log`, `std::exp`,
-> divisions, and `std::mdspan` indexing (e.g. the microstrip bidirectional solve in doc 06, the
-> 12-mode enclosure loop in `RectangularEnclosureWidget.cpp`). UBSan catches divide-by-zero / domain
-> errors that the old code would silently turn into `inf`/`nan` and push into a Qt spinbox.
+> [!NOTE]
+> ASan/UBSan is high-value here because the formulas use `std::pow`, `std::log`, `std::exp`, divisions,
+> and `std::mdspan` indexing (e.g. the microstrip bidirectional solve in doc 06, the 12-mode enclosure
+> loop in the rectangular-enclosure calculator). UBSan catches divide-by-zero and domain errors at their
+> origin rather than letting them propagate as `inf`/`nan`.
 
 ---
 
-## 7. Quality tooling
+## 6. Quality tooling
 
-### 7.1 Warnings interface library (`cmake/CompilerWarnings.cmake`)
+### 6.1 Warnings interface library (`cmake/CompilerWarnings.cmake`)
 
-A dedicated `INTERFACE` target carries the warning policy so it can be applied to the lib *and* tests
-*and* examples uniformly, and exported (so consumers are never forced into `-Werror`, but in-tree builds
-are strict):
+A dedicated `INTERFACE` target carries the warning policy so it applies to the lib *and* tests *and*
+examples uniformly, and is exported (consumers are never forced into `-Werror`, but in-tree builds are
+strict):
 
 ```cmake
 # cmake/CompilerWarnings.cmake
@@ -602,16 +596,15 @@ if(EMC_WARNINGS_AS_ERRORS)
 endif()
 ```
 
-`-Wconversion`/`-Wsign-conversion` are explicitly on: the old code mixed `qreal`, `int` spinbox values,
-and unit factors freely (the `*39.37` m→inch literals, the `if/else` gauge tables in
-`StandardGaugeWireWidget.cpp`). With mp-units a narrowing or a bare-double escape now warns, so these
-flags actively police that the unit-safety from doc 03 is not bypassed.
+`-Wconversion`/`-Wsign-conversion` are explicitly on: EMC inputs mix lengths, frequencies, and unit
+factors, and a narrowing or a bare-`double` escape now warns, actively policing that the unit-safety from
+doc 03 is not bypassed.
 
-> Note: `emc_project_warnings` is exported in §5's `install(TARGETS ...)` only so the export set is
-> self-consistent; it is an `INTERFACE` lib with no usage requirements that affect consumers' own
-> warning levels (the `-Werror` is gated behind `EMC_WARNINGS_AS_ERRORS`, default OFF for non-top-level).
+`emc_project_warnings` is exported in §4's `install(TARGETS ...)` only so the export set is
+self-consistent; it is an `INTERFACE` lib whose `-Werror` is gated behind `EMC_WARNINGS_AS_ERRORS`
+(default OFF for non-top-level), so it never raises consumers' own warning levels.
 
-### 7.2 `.clang-format` and `.clang-tidy` (repo root)
+### 6.2 `.clang-format` and `.clang-tidy` (repo root)
 
 Pointers, not full configs (style is owned by the repo, not this doc):
 
@@ -638,162 +631,153 @@ WarningsAsErrors: 'bugprone-*'
 HeaderFilterRegex: 'include/emc/.*'
 ```
 
-`misc-include-cleaner` doubles as the layering enforcer from doc 01: a `src/component/*.cpp` that
-includes `emc/basic/...` shows up as an unexpected include and fails review.
+`misc-include-cleaner` doubles as the layering enforcer from doc 01: a `src/component/*.cpp` that includes
+`emc/basic/...` shows up as an unexpected include and fails review.
 
-### 7.3 `compile_commands.json`
+### 6.3 `compile_commands.json`
 
-`CMAKE_EXPORT_COMPILE_COMMANDS ON` (set in §2 and the preset) emits `build/<preset>/compile_commands.json`.
-Symlink/point clangd and clang-tidy at it:
+`CMAKE_EXPORT_COMPILE_COMMANDS ON` (set in §1 and the preset) emits
+`build/<preset>/compile_commands.json`. Point clangd and clang-tidy at it:
 
-```text
+```bash
 ln -sf build/debug/compile_commands.json compile_commands.json   # one-time, repo root
 clang-tidy -p build/debug src/component/microstrip_trace.cpp
 ```
 
 ---
 
-## 8. Folder layout recap and source→target mapping
+## 7. Folder layout recap and source→target mapping
 
 Consistent with `01-architecture-and-layout.md`. Public headers and compiled sources mirror the same
 Foundation / Domain / Facade structure:
 
 ```text
 emcpp/
-├── CMakeLists.txt                 # §2
-├── CMakePresets.json              # §6
-├── vcpkg.json                     # §12 (optional)
-├── conanfile.py                   # §12 (optional)
-├── .clang-format  .clang-tidy     # §7.2
+├── CMakeLists.txt                 # §1
+├── CMakePresets.json              # §5
+├── vcpkg.json                     # §11 (optional)
+├── conanfile.py                   # §11 (optional)
+├── .clang-format  .clang-tidy     # §6.2
 ├── cmake/
-│   ├── Dependencies.cmake         # §3 (mp-units find-or-fetch)
-│   ├── CompilerWarnings.cmake     # §7.1
-│   ├── Install.cmake              # §5
-│   └── emcConfig.cmake.in         # §5
+│   ├── Dependencies.cmake         # §2 (mp-units find-or-fetch)
+│   ├── CompilerWarnings.cmake     # §6.1
+│   ├── Install.cmake              # §4
+│   └── emcConfig.cmake.in         # §4
 ├── include/emc/                   # PUBLIC API (installed)
-│   ├── export.hpp                 # GENERATED into build tree, installed from there (§4)
+│   ├── export.hpp                 # GENERATED into build tree, installed from there (§3)
 │   ├── error.hpp                  # Foundation
 │   ├── units/...   constants/...   materials/...
 │   ├── basic/skin_depth.hpp  decibel.hpp  antenna.hpp
 │   ├── converter/...  component/...  prediction/...
 │   ├── shielding/...  filtering/...  cabling/...  grounding/...  testing/...
 │   └── emc.hpp                    # Facade umbrella (include-only)
-├── src/                           # COMPILED translation units (target_sources, §2)
+├── src/                           # COMPILED translation units (target_sources, §1)
 │   ├── error.cpp
 │   ├── units/parse.cpp  constants/constants.cpp  materials/material_db.cpp
 │   ├── basic/skin_depth.cpp ...
 │   └── component/microstrip_trace.cpp ...
 ├── tests/                         # doc 09 — separate target, links emc::emc + Catch2
 │   ├── CMakeLists.txt
-│   └── data/*.csv                 # the 52 golden fixtures, moved out of resources/
+│   └── data/                      # hand-computed / textbook reference vectors
 └── examples/
     └── CMakeLists.txt
 ```
 
 Mapping rules:
 
-- One header `include/emc/<category>/<name>.hpp` ↔ one source `src/<category>/<name>.cpp` ↔ one entry
-  in `target_sources(emc PRIVATE ...)`. Adding a doc-07 calculator is exactly: add the pair, add the
-  one `target_sources` line, add a test (doc 09). No glob means the new file is built deterministically.
+- One header `include/emc/<category>/<name>.hpp` ↔ one source `src/<category>/<name>.cpp` ↔ one entry in
+  `target_sources(emc PRIVATE ...)`. Adding a doc-07 calculator is exactly: add the pair, add the one
+  `target_sources` line, add a test (doc 09). No glob means the new file is built deterministically.
 - Header-only calculators (pure `constexpr calculate()`) still get a `.cpp` if they need a compiled
-  validate/parse boundary or just an explicit instantiation anchor; otherwise the `.cpp` can be empty
-  but is kept for symmetry and to give the linker a TU per calculator.
+  validate/parse boundary or an explicit instantiation anchor; otherwise the `.cpp` can be empty but is
+  kept for symmetry and to give the linker a TU per calculator.
 - Foundation `.cpp` files are few: `error.cpp` (message formatting), `parse.cpp` (string→quantity),
   `material_db.cpp` (the lookup over the constexpr table). Constants are header `constexpr`; the
   `constants.cpp` exists only to anchor any ODR-used definition.
 
 ---
 
-## 9. Consuming from the existing Qt app
+## 8. Examples target
 
-The app keeps its own Qt build (it stays a Qt executable) and simply *adds* `emc` as a dependency.
-Two acquisition modes:
+The `examples/` subdirectory links `emc::emc` and demonstrates the public API through a generic front end
+that prints results with `std::print` — no GUI toolkit involved. Because examples link the same
+`emc::emc` alias as a `find_package(emc)` consumer, building them in-tree is a standing smoke test of the
+public surface.
 
-**A. Installed package (preferred for releases):**
+### Example usage
+
+```c++
+// examples/skin_depth.cpp
+#include <emc/basic/skin_depth.hpp>
+#include <emc/materials/material_db.hpp>
+#include <mp-units/systems/si.hpp>
+#include <print>
+
+int main() {
+    using namespace mp_units;
+    using namespace mp_units::si::unit_symbols;
+
+    const emc::basic::SkinDepthInput in{
+        .frequency   = 1.0 * MHz,
+        .conductor   = emc::materials::copper(),
+    };
+
+    if (const auto r = emc::basic::calculate(in)) {
+        std::println("skin depth = {}", r->skin_depth);
+    } else {
+        std::println("input error: {}", r.error().message());
+    }
+}
+```
 
 ```cmake
-# emc-prediction/CMakeLists.txt  (the app)
-find_package(emc 0.1 REQUIRED)              # pulls emc::emc + mp-units transitively
-# ... existing Qt setup unchanged ...
-target_link_libraries(NinjaEMC PRIVATE
-    Qt6::Widgets Qt6::Gui Qt6::Core Qt6::Svg Qt6::SvgWidgets
-    emc::emc)                               # <-- the only new line
+# examples/CMakeLists.txt
+add_executable(emc_example_skin_depth skin_depth.cpp)
+target_link_libraries(emc_example_skin_depth PRIVATE emc::emc emc_project_warnings)
 ```
 
-**B. In-tree (preferred during migration):**
+> [!NOTE]
+> The front end is intentionally framework-agnostic. A calculator returns a `Result` of mp-units
+> quantities; rendering it (console, a desktop UI, a web service) is a presentation concern that lives
+> entirely outside `emc` and links against `emc::emc` like any other consumer.
 
-```cmake
-# Pull the sibling library directly while iterating on both repos.
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../emcpp emcpp-build EXCLUDE_FROM_ALL)
-target_link_libraries(NinjaEMC PRIVATE emc::emc)
-```
+---
 
-(`PROJECT_IS_TOP_LEVEL` is false in mode B, so `emc`'s tests/examples stay off by default — the app
-build does not also build the library's test suite.)
+## 9. Keeping the library GUI-free (CI gate)
 
-What the app *deletes* once linked (this is the payoff — the pain points from the shared context vanish):
+### 9.1 The CI grep gate (build-side enforcement)
 
-```diff
-  // src/Utilites/HelperTypes.h  (app)
-- #define PI 3.14                                 // precision BUG
-- #define SPEEDOFLIGHT 300000000.0                // imprecise c
-- #define PLANCK_CONSTANT 6.62606957e-34
-+ #include <emc/constants.hpp>                    // emc::constants::pi, ::c, ::h (exact)
-
-  // src/BasicCalculations/SkinDepth/SkinDepthWidget.h  (and 7+ other files)
-- qreal mu0 = 4 * M_PI * 1e-7;                    // re-defined in 8+ files
-+ // gone — use emc::constants::mu_0
-
-  // 6 Inductance headers
-- #define PermofFreeSpace ((4 * M_PI) / 10000000.0)   // copy-pasted x6
-+ // gone — use emc::constants::mu_0
-```
-
-```diff
-  // src/.../StandardGaugeWireWidget.cpp  (app)  -- the if/else unit chains + EXIT_FAILURE sentinel
-- if (unit == "mm") factor = 1.0; else if (unit == "mils") factor = 0.0254; else ...   // ~35 lines
-- qreal GetResistivity(Material m) { ...; return EXIT_FAILURE; }                        // sentinel
-+ // gone — the widget now reads spinboxes into an emc::component::StandardGaugeWireInput
-+ //        (mp-units quantities), calls emc::component::calculate(in), and on the
-+ //        std::expected error branch shows the QMessageBox (UI stays in the UI).
-```
-
-The widget's button-clicked lambda shrinks to: read spinboxes → build the aggregate `Input` (designated
-initializers, mp-units quantities) → call `emc::<cat>::calculate(in)` → on `std::expected` error show the
-`QMessageBox` (now the *only* place Qt validation lives), on success write `Result` fields to the
-spinboxes. All math, constants, unit conversion, material data, and validation move into `emc`. The full
-before/after of a widget body is owned by doc 06; the build-side fact is simply: **+1 link line, and
-hundreds of duplicated lines deleted.** Sequencing is in doc 10.
-
-### 9.1 The anti-Qt CI gate (build-side enforcement)
-
-To keep the library Qt-free permanently (doc 01's one invariant), CI runs a grep gate over the *library*
-tree before configuring:
+To keep the library free of any GUI dependency permanently (doc 01's one invariant), CI greps for any GUI
+symbols over the *library* tree before configuring:
 
 ```bash
-# fails the build if any emc source/header references Qt
-if grep -rEn 'Q[A-Z][A-Za-z]*|qreal|QtWidgets|#include +<Q' include/ src/; then
-  echo "ERROR: Qt symbols found in the Qt-free emc library" >&2
+# fails the build if any emc source/header references a GUI toolkit symbol
+if grep -rEni '#include[[:space:]]*<[^>]*(gtk|gui|window|x11|cocoa|wx)' include/ src/; then
+  echo "ERROR: GUI-toolkit symbols found in the GUI-free emc library" >&2
   exit 1
 fi
 ```
+
+The library exposes only `emc::*` calculators returning `std::expected<Result, Error>` over mp-units
+quantities; any front end links `emc::emc` and renders results itself (§8), so no GUI symbol ever belongs
+in `include/` or `src/`.
 
 ---
 
 ## 10. ABI & versioning
 
 - **SemVer on the package**: `project(emc VERSION MAJOR.MINOR.PATCH)`. The version file uses
-  `COMPATIBILITY SameMajorVersion`, so a consumer asking `find_package(emc 0.1)` accepts `0.x` but
-  rejects `1.0` (during 0.x, ABI may break freely — appropriate for a pre-1.0 library being shaped by
-  the doc-07 work-list).
+  `COMPATIBILITY SameMajorVersion`, so a consumer asking `find_package(emc 0.1)` accepts `0.x` but rejects
+  `1.0` (during 0.x, ABI may break freely — appropriate for a pre-1.0 library being shaped by the doc-07
+  work-list).
 - **SOVERSION = MAJOR** on the shared lib (`set_target_properties(... SOVERSION ${PROJECT_VERSION_MAJOR})`)
   so the runtime linker tracks ABI by major version (`libemc.so.0`).
-- **ABI surface is intentionally tiny** thanks to default-hidden visibility (§4): only `EMC_API`
+- **ABI surface is intentionally tiny** thanks to default-hidden visibility (§3): only `EMC_API`
   functions are exported, so most refactors of the header-only `constexpr` calculators are *not* ABI
   breaks at all — they recompile into the consumer. The risk surface is the handful of compiled boundary
   functions (`parse_*`, `material_*`, error formatting).
 - **mp-units is a public dependency**, so an mp-units major bump is an `emc` ABI concern; the pinned
-  `GIT_TAG` (§3) and `find_dependency(mp-units)` (§5) make the coupling explicit and reproducible.
+  `GIT_TAG` (§2) and `find_dependency(mp-units)` (§4) make the coupling explicit and reproducible.
 
 ---
 
@@ -801,25 +785,25 @@ fi
 
 > **Headers + `.cpp` today; modules are a deliberate non-goal for v1.** The plan targets a traditional
 > compiled library because mp-units, Catch2, and tooling (clang-tidy, clangd) are most robust in
-> header+`.cpp` mode across GCC 14 / Clang 18 / MSVC today, and because the Qt app consuming us is also
-> header-based. When the ecosystem settles, the migration is mechanical and *additive*:
+> header+`.cpp` mode across GCC 14 / Clang 18 / MSVC today. When the ecosystem settles, the path to
+> modules is mechanical and *additive*:
 >
 > - bump nothing — `cmake_minimum_required(3.28)` already supports `import std` and `CXX_MODULES`;
 > - add a `FILE_SET CXX_MODULES` to the `emc` target listing `*.cppm` interface units;
 > - mp-units already ships a modules build (we keep `MP_UNITS_BUILD_CXX_MODULES OFF` today, flip it on);
 > - keep the `include/emc/*.hpp` headers as a *parallel* facade for consumers who can't use modules yet.
 >
-> No public API or namespace changes are implied. This callout exists so the directory layout (§8) and
-> the `.cpp`-per-calculator rule (one TU per module interface later) do not have to change when modules
-> arrive. Other C++26 forward-looking items (reflection-driven enum↔string replacing magic_enum,
-> contracts replacing some `validate()` bodies) are discussed in docs 02 and 05, not here.
+> No public API or namespace changes are implied. This callout exists so the directory layout (§7) and the
+> `.cpp`-per-calculator rule (one TU per module interface later) do not have to change when modules
+> arrive. Other C++26 forward-looking items (reflection-driven enum↔string, contracts replacing some
+> `validate()` bodies) are discussed in docs 02 and 05.
 
 ---
 
-## 12. Reproducible dependencies (optional sketches) and ABI note
+## 12. Reproducible dependencies (optional sketches)
 
-For consumers/CI that want lockfile-style reproducibility instead of `FetchContent`, the project can
-ship either manifest; both resolve the *same* mp-units the `find_package` branch in §3 picks up.
+For consumers/CI that want lockfile-style reproducibility instead of `FetchContent`, the project can ship
+either manifest; both resolve the *same* mp-units the `find_package` branch in §2 picks up.
 
 **vcpkg manifest (`vcpkg.json`):**
 
@@ -827,7 +811,7 @@ ship either manifest; both resolve the *same* mp-units the `find_package` branch
 {
   "name": "emc",
   "version-semver": "0.1.0",
-  "description": "Qt-free modern-C++ EMC engineering calculation library",
+  "description": "Modern-C++ EMC engineering calculation library",
   "dependencies": [
     "mp-units"
   ],
@@ -839,9 +823,9 @@ ship either manifest; both resolve the *same* mp-units the `find_package` branch
 }
 ```
 
-Configure with vcpkg toolchain:
+Configure with the vcpkg toolchain:
 
-```text
+```bash
 cmake --preset debug -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake
 ```
 
@@ -884,26 +868,23 @@ class EmcConan(ConanFile):
         self.cpp_info.requires = ["mp-units::mp-units"]   # transitive public dep
 ```
 
-Both manifests must pin exact versions (`builtin-baseline` / `mp-units/2.5.0`) so a checkout from any
-machine builds the *same* `emc`. This is the package-manager analogue of the `GIT_TAG v2.5.0` pin in §3,
-and it matters because mp-units is a `PUBLIC` dependency that participates in `emc`'s ABI (§10).
+Both manifests pin exact versions (`builtin-baseline` / `mp-units/2.5.0`) so a checkout from any machine
+builds the *same* `emc` — the package-manager analogue of the `GIT_TAG v2.5.0` pin in §2, mattering
+because mp-units is a `PUBLIC` dependency that participates in `emc`'s ABI (§10).
 
 ---
 
 ## Cross-references
 
-- `01-architecture-and-layout.md` — the layer/namespace/directory structure these targets implement; the
-  one Qt-free invariant the §9.1 CI gate enforces; the ABI/versioning stance expanded in §10.
+- `01-architecture-and-layout.md` — the layer/namespace/directory structure these targets implement and
+  the GUI-free invariant the §9.1 CI gate enforces.
 - `03-quantities-and-units-mp-units.md` — why mp-units links `PUBLIC` and must be `find_dependency`'d in
-  the package config (§3, §5).
-- `04-constants-and-material-database.md` — the `constants.cpp`/`material_db.cpp` compiled units and the
-  duplicated `#define PI`/`mu0`/material tables the app deletes in §9.
-- `05-error-handling-and-validation.md` — the `error.cpp` boundary unit; `EXIT_FAILURE`/`QMessageBox`
-  removal shown in the §9 diff.
+  the package config (§2, §4).
+- `04-constants-and-material-database.md` — the `constants.cpp`/`material_db.cpp` compiled units.
+- `05-error-handling-and-validation.md` — the `error.cpp` boundary unit and the `std::expected` model.
 - `06-calculator-design-pattern.md` — the per-calculator header/`.cpp` pair each `target_sources` line
-  corresponds to; full widget before/after.
+  corresponds to.
 - `07-calculator-inventory.md` — the work-list whose ~52 items each add one `target_sources` entry.
-- `09-testing-and-golden-vectors.md` — the `tests/` subdirectory target, Catch2 acquisition (§3), the 52
-  CSV fixtures moved under `tests/data/`, and the ASan/UBSan `ctest` preset (§6).
-- `10-migration-roadmap.md` — sequencing of the app rewire (in-tree `add_subdirectory` first, installed
-  `find_package` at release) described in §9.
+- `09-testing-and-golden-vectors.md` — the `tests/` subdirectory target, Catch2 acquisition (§2),
+  hand-computed/textbook reference vectors under `tests/data/`, and the ASan/UBSan `ctest` preset (§5).
+- `10-roadmap.md` — sequencing of the calculator work-list.
