@@ -1367,12 +1367,5 @@ guard; **(d)** `constexpr`.
 - [`00-foundation-code.md`](00-foundation-code.md) — the canonical `emc::units::*`, `emc::Result`,
   `emc::in_range`/`require_positive`/`require_nonzero`, `emc::ErrorCode`, `emc::domain_error`,
   `emc::Calculator`/`ValidatedCalculator`, and the `emc::test::approx` helper reused above.
-- [`../03-quantities-and-units-mp-units.md`](../03-quantities-and-units-mp-units.md) — `Length` aliases,
-  `numerical_value_in`/`.in(...)`, and the `mil` unit pattern.
-- [`../05-error-handling-and-validation.md`](../05-error-handling-and-validation.md) — `validate()`
-  returning `std::expected<void, Error>` and the typed-error model.
-- [`../06-calculator-design-pattern.md`](../06-calculator-design-pattern.md) — the Input/Result/
-  `calculate`/`validate` triple and the distinct-`solve_*`-functions-over-a-`detail::`-core convention for
-  bidirectional calculators (Microstrip is the worked example there).
 - [`../09-testing-and-golden-vectors.md`](../09-testing-and-golden-vectors.md) — the reference-vector
   harness and tolerance model that `emc::test::approx` feeds.

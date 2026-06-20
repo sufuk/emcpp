@@ -92,7 +92,7 @@ constexpr double kPi         = emc::constants::pi;
 > (`len.numerical_value_in(m)`), evaluates the closed form in `double`, and re-attaches the henry unit on the
 > result (`L_H * H`). The dimensional contract is still enforced at the boundary — `Input` fields are
 > `emc::units::Length`, the `Result` is `emc::units::Inductance` — see
-> [doc 06 §4](../06-calculator-design-pattern.md) (evaluate ratio-formulas in one coherent unit).
+> [`00-foundation-code.md`](./00-foundation-code.md) (evaluate ratio-formulas in one coherent unit).
 
 ---
 
@@ -1167,7 +1167,7 @@ diameter domain guard.
 
 At the bottom of `include/emc/component/inductance.hpp`, add tag structs + `static_assert`s so each
 (Input, Result, free-function) triple is a compile-time-checked `Calculator` (per
-[doc 06 §1e](../06-calculator-design-pattern.md) and the foundation `calculator.hpp`):
+[`00-foundation-code.md`](./00-foundation-code.md) and the foundation `calculator.hpp`):
 
 ```c++
 namespace emc::component {
@@ -1198,7 +1198,7 @@ EMC_BIND_INDUCTANCE(Via,             ViaInput,             ViaResult,           
 
 > The `validate()` overloads are resolved by `Input` type (one free `validate` per `*Input`), so the macro's
 > `emc::component::validate(in)` picks the right one — the
-> [doc 06](../06-calculator-design-pattern.md) "free functions overloaded per Input type" pattern.
+> [`00-foundation-code.md`](./00-foundation-code.md) "free functions overloaded per Input type" pattern.
 
 ---
 
@@ -1207,9 +1207,5 @@ EMC_BIND_INDUCTANCE(Via,             ViaInput,             ViaResult,           
 - [`00-foundation-code.md`](./00-foundation-code.md) — the canonical `emc::constants::mu0` / `::pi`,
   `emc::units::Length`/`Inductance`, `emc::Result`/`Error`/`require_positive`/`require_nonzero`, the
   `Calculator`/`ValidatedCalculator` concepts, and the `emc::test::approx` helper reused above.
-- [`../03-quantities-and-units-mp-units.md`](../03-quantities-and-units-mp-units.md) — how `Length` inputs
-  give compile-time unit safety across the mm/cm/m/inch/mils range.
-- [`../06-calculator-design-pattern.md`](../06-calculator-design-pattern.md) — the Input/Result/`calculate`
-  triple, per-`Input` `validate` overloads, and the `Calculator` concept these seven instantiate.
 - [`../09-testing-and-golden-vectors.md`](../09-testing-and-golden-vectors.md) — the testing harness and
   tolerance rules behind the hand-computed reference tests above.

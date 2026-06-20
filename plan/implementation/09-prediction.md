@@ -612,8 +612,8 @@ emc::Result<RfFieldResult> calculate(const RfFieldInput& in) {
 
 - **`emc::units::Dbm` / `emc::units::Decibel` typed wrappers** — a dBm *level* and a dBi *gain* are
   distinct types that can never be silently summed with a linear watt; the log→linear conversion is
-  centralized (doc 03 §9). Power levels are inherently logarithmic, so typing them removes a whole class of
-  unit confusion.
+  centralized (see 00-foundation-code.md for the units vocabulary). Power levels are inherently
+  logarithmic, so typing them removes a whole class of unit confusion.
 - **mp-units `ElectricField` / `MagneticField` / `PowerDensity` outputs** — `E [V/m]`, `H [A/m]`,
   `P_D [W/m^2]` carry their dimensions; `P_D = E*H` is *checked* to be `(V/m)*(A/m) = W/m^2`.
 - **Designated initializers + member defaults** — named `transmit_power` / `gain` / `distance` fields,
@@ -976,12 +976,3 @@ laws via the 6.02 dB octave drop; (c) covers all three failure modes.
 - [`00-foundation-code.md`](00-foundation-code.md) — the canonical `emc::constants`, `emc::units` (incl.
   the `Decibel` / `Dbm` log wrappers + `to_power`), `emc::Error` / `Result` / validators, the
   `Calculator` / `ValidatedCalculator` concepts, and `emc::test::approx`.
-- [`../03-quantities-and-units-mp-units.md`](../03-quantities-and-units-mp-units.md) — why `dBm`/`dBi` are
-  typed log wrappers rather than linear mp-units units.
-- [`../04-constants-and-material-database.md`](../04-constants-and-material-database.md) — the single
-  source of truth for `mu0`, `c`, `z0`, and `pi`.
-- [`../05-error-handling-and-validation.md`](../05-error-handling-and-validation.md) — the
-  `std::expected` / `ErrorCode` model behind the `validate()` guards.
-- [`../06-calculator-design-pattern.md`](../06-calculator-design-pattern.md) — the Input/Result/
-  `calculate`/`validate` triple and the `static_assert(emc::ValidatedCalculator<...>)` each header ends
-  with.

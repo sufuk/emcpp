@@ -122,13 +122,5 @@ one of these guides.
 
 ## Cross-references (top-level plan, the "why" at depth)
 
-- [`../03-quantities-and-units-mp-units.md`](../03-quantities-and-units-mp-units.md) — the mp-units
-  vocabulary and the `emc::units` aliases.
-- [`../04-constants-and-material-database.md`](../04-constants-and-material-database.md) —
-  `emc::constants` and `emc::materials` as the single source of truth.
-- [`../05-error-handling-and-validation.md`](../05-error-handling-and-validation.md) —
-  `Error` / `ErrorCode` / `std::expected`.
-- [`../06-calculator-design-pattern.md`](../06-calculator-design-pattern.md) — the Input/Result/
-  `calculate` triple and the `Calculator` concept.
 - [`../09-testing-and-golden-vectors.md`](../09-testing-and-golden-vectors.md) — the reference-vector
   harness and tolerances.

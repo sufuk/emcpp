@@ -42,10 +42,7 @@ Fixed for the whole plan. If a doc ever seems to disagree, this box wins.
 | — | [`README.md`](README.md) | **This index** — purpose, locked decisions, document map, reading orders, target API, status legend. |
 | 00 | [`00-overview-and-goals.md`](00-overview-and-goals.md) | *Why* a type-safe, GUI-free EMC library: scope, non-goals, glossary, success criteria. |
 | 01 | [`01-architecture-and-layout.md`](01-architecture-and-layout.md) | Layered architecture, directory/namespace layout, dependency rules, public/internal boundary, calculator contract, ABI/versioning. |
-| 03 | [`03-quantities-and-units-mp-units.md`](03-quantities-and-units-mp-units.md) | The mp-units subsystem: every physical quantity and conversion with compile-time unit safety. |
-| 04 | [`04-constants-and-material-database.md`](04-constants-and-material-database.md) | One `constexpr` place for every constant and material property, and how calculators consume it. |
-| 05 | [`05-error-handling-and-validation.md`](05-error-handling-and-validation.md) | The GUI-free error model (`ErrorCode` + `Error` + `std::expected`) and the declarative validation layer. |
-| 06 | [`06-calculator-design-pattern.md`](06-calculator-design-pattern.md) | **The template you copy 51 times** — the `Input`/`Result`/`calculate()`/`validate()`/`Calculator`-concept shape. |
+| — | [`implementation/`](implementation/) | **Per-calculator implementation guides** (header + `.cpp` + tests for all 51 calculators), built on [`implementation/00-foundation-code.md`](implementation/00-foundation-code.md) — the units, constants, materials, error model, and the calculator pattern, *as actual code*. |
 | 07 | [`07-calculator-inventory.md`](07-calculator-inventory.md) | **Calculator catalog & library map** — all calculators (inputs, units, formulas, solve directions, validation, materials, complexity) and their target locations. |
 | 08 | [`08-build-system-cmake.md`](08-build-system-cmake.md) | The modern-CMake build: mp-units acquisition, symbol visibility, `install()`/`export()` + package config, presets, tooling. |
 | 09 | [`09-testing-and-golden-vectors.md`](09-testing-and-golden-vectors.md) | **Testing strategy** — fast, deterministic, GUI-free regression suite layered with compile-time, property, and CI checks. |
@@ -55,8 +52,9 @@ Fixed for the whole plan. If a doc ever seems to disagree, this box wins.
 - **Decision-maker / reviewer** — *is the plan sound?*
   **00** (vision, scope, success) → **01** (shape) → **07** (catalog scope & size). *Optional:* **09**.
 - **Implementer** — *what do I build, in what order?*
-  **00** → **01** → **03** (units) → **04** (constants & materials) → **05** (errors) → **06** (template)
-  → **07** (pick a row) → **08** (build) → **09** (prove). Then loop **06 → 07 → 09** per calculator.
+  **00** → **01** → [`implementation/00-foundation-code.md`](implementation/00-foundation-code.md) (units,
+  constants, materials, errors, the calculator pattern — *as code*) → **07** (pick a calculator) → its
+  [`implementation/`](implementation/) guide → **08** (build) → **09** (prove). Loop the last three per calculator.
 
 ---
 
@@ -65,7 +63,7 @@ Fixed for the whole plan. If a doc ever seems to disagree, this box wins.
 Every calculator converges on four moves: build an `Input` with **designated initializers** +
 **mp-units literals**, call a **free** `calculate()`, branch on the **`std::expected`** result, and
 extract the answer in **any unit** (`.in(...)`) — the core never bakes in a presentation unit.
-Conventions per [`06`](06-calculator-design-pattern.md) and [`03`](03-quantities-and-units-mp-units.md).
+The shared foundation code (units, constants, error model, the calculator pattern) lives in [`implementation/00-foundation-code.md`](implementation/00-foundation-code.md).
 
 ```cpp
 #include <emc/basic/skin_depth.hpp>
@@ -111,7 +109,7 @@ Progress is tracked **per calculator** against the catalog in
 | --- | --- |
 | **TODO** | Not started. *All 51 calculators start here.* |
 | **In-progress** | Header and/or `.cpp` exist, but not yet proven against the reference vector. |
-| **Done** | Pure `calculate()` implemented per [`06`](06-calculator-design-pattern.md), passing its reference vector ([`09`](09-testing-and-golden-vectors.md)). |
+| **Done** | Pure `calculate()` implemented per its [`implementation/`](implementation/) guide, passing its reference vector ([`09`](09-testing-and-golden-vectors.md)). |
 
 > [!IMPORTANT]
 > **51** math-bearing leaf calculators, each backed by hand-computed / textbook reference values used as

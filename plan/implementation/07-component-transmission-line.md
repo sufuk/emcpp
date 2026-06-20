@@ -1409,11 +1409,3 @@ static_assert(emc::ValidatedCalculator<WirePair>);
   aliases (including the `InductancePerLength`/`ResistancePerLength` additions used here),
   `emc::materials::properties()`, the `Error`/`ErrorCode`/`Result` model, the `ValidatedCalculator`
   concept, and `emc::test::approx`.
-- [`../03-quantities-and-units-mp-units.md`](../03-quantities-and-units-mp-units.md) — why `mu_r`/`ε_r`
-  are plain doubles, the per-length quantity aliases, and `.numerical_value_in(unit)`.
-- [`../04-constants-and-material-database.md`](../04-constants-and-material-database.md) — the Copper σ
-  (5.96e7 S/m) and the single-source `mu0`/`eps0` used by every per-length calculator.
-- [`../05-error-handling-and-validation.md`](../05-error-handling-and-validation.md) — the
-  `std::expected` model and `ErrorCode` taxonomy.
-- [`../06-calculator-design-pattern.md`](../06-calculator-design-pattern.md) — the Input/Result/
-  `calculate`/`validate` triple and the `detail::` shared-core pattern that `per_length_line` follows.

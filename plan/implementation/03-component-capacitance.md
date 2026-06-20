@@ -477,14 +477,6 @@ reference value; **(c)** proves linearity so a stray `r²`/`²r` typo is caught;
   `emc::units::Area`/`Length`/`Capacitance`, `emc::Result`/`Error`/`ErrorCode`, the `in_range` /
   `require_positive` / `require_nonzero` validators, the `Calculator`/`ValidatedCalculator` concepts, and
   the `emc::test::approx` helper.
-- [`../03-quantities-and-units-mp-units.md`](../03-quantities-and-units-mp-units.md) — `Area`/`Length`/
-  `Capacitance` quantities and `.in(unit)`; `eps_r` as a dimensionless double.
-- [`../04-constants-and-material-database.md`](../04-constants-and-material-database.md) — the single `ε₀`
-  source of truth.
-- [`../05-error-handling-and-validation.md`](../05-error-handling-and-validation.md) — the
-  `std::expected`/`ErrorCode` validation model.
-- [`../06-calculator-design-pattern.md`](../06-calculator-design-pattern.md) — the Input/Result/
-  `calculate`/`validate` triple, overloaded `calculate`, and the tag-struct concept binding.
 - [`../07-calculator-inventory.md`](../07-calculator-inventory.md) — inventory rows for Parallel Plate and
   Sphere (placement `emc::component`, header/impl/test paths).
 - [`../09-testing-and-golden-vectors.md`](../09-testing-and-golden-vectors.md) — the testing harness and

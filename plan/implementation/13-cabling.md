@@ -758,13 +758,6 @@ TEST_CASE("crosstalk rejects bad inputs", "[cabling][crosstalk][validation]") {
 - [`00-foundation-code.md`](00-foundation-code.md) — the canonical `error.hpp` / `constants.hpp` /
   `units.hpp` / `calculator.hpp` and the `emc::test::approx` helper reused above (the `Decibel` wrapper,
   `pi`, the validators, the `Calculator` concept).
-- [`../03-quantities-and-units-mp-units.md`](../03-quantities-and-units-mp-units.md) — why `f`/`L_m`/`C_m`
-  become typed quantities and why dB is a *typed log wrapper*, never a linear mp-units unit.
-- [`../05-error-handling-and-validation.md`](../05-error-handling-and-validation.md) — the
-  `Error`/`ErrorCode`/`std::expected` model behind the `validate()` bodies and the
-  `domain_error`/`division_by_zero` factories.
-- [`../06-calculator-design-pattern.md`](../06-calculator-design-pattern.md) — the Input/Result/
-  `calculate`/`validate` triple and the `Calculator` concept both calculators bind to.
 - [`../07-calculator-inventory.md`](../07-calculator-inventory.md) §7 (Cabling → `emc::cabling`) — the
   spec row for naming, placement, and the documented `V_FE = −200` clamp.
 - [`../09-testing-and-golden-vectors.md`](../09-testing-and-golden-vectors.md) — the testing harness and

@@ -98,7 +98,7 @@ if (r) std::print("{}\n", r->skin_depth.numerical_value_in(cm));
 else   report(r.error());                                      // Error is a value, not a dialog
 ```
 
-The full per-calculator pattern lives in [06-calculator-design-pattern.md](06-calculator-design-pattern.md).
+The full per-calculator pattern and the foundation code live in [implementation/00-foundation-code.md](implementation/00-foundation-code.md).
 
 ---
 
@@ -111,11 +111,8 @@ Read **00** (this file) first for the vision, then **01** for the structural fou
 | [README.md](README.md) | Index and recommended reading order. |
 | **[00-overview-and-goals.md](00-overview-and-goals.md)** *(this file)* | Vision, goals/non-goals, principles, architecture, glossary, success criteria. |
 | [01-architecture-and-layout.md](01-architecture-and-layout.md) | Layers, directory/namespace layout, dependency rules, compiled-lib shape. |
-| [03-quantities-and-units-mp-units.md](03-quantities-and-units-mp-units.md) | The mp-units subsystem: type-safe quantities and conversions. |
-| [04-constants-and-material-database.md](04-constants-and-material-database.md) | One `constexpr` source of truth for constants + materials. |
-| [05-error-handling-and-validation.md](05-error-handling-and-validation.md) | `std::expected` + `emc::Error` and the `validate()` design. |
-| [06-calculator-design-pattern.md](06-calculator-design-pattern.md) | The repeatable per-calculator pattern + worked examples. |
-| [07-calculator-inventory.md](07-calculator-inventory.md) | **Calculator Catalog** — the complete ~52 calculators and their mapping. |
+| [implementation/](implementation/) | **Per-calculator implementation guides** + [00-foundation-code.md](implementation/00-foundation-code.md): the units, constants, materials, error model, and calculator pattern *as code*. |
+| [07-calculator-inventory.md](07-calculator-inventory.md) | **Calculator Catalog** — all 51 calculators and their mapping. |
 | [08-build-system-cmake.md](08-build-system-cmake.md) | Modern CMake compiled lib, mp-units dependency, install/export, presets. |
 | [09-testing-and-golden-vectors.md](09-testing-and-golden-vectors.md) | **Testing Strategy** — known-value, property, round-trip, `constexpr`, edge-case tests. |
 

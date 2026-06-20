@@ -286,7 +286,7 @@ emc::Result<HarmonicTrapResult> calculate(const HarmonicTrapInput& in) {
 - **`std::numbers::sqrt2` for the RMS factor** — the exact `std::numbers::sqrt2_v<double>` replaces any
   truncated literal, so the `√2` scaling carries full double precision.
 - **`emc::constants::pi`** — one full-precision, namespaced pi for every π site in the formula,
-  consistent with every other calculator (doc 04 §1.2).
+  consistent with every other calculator (see `00-foundation-code.md` for the shared constant).
 - **Typed multi-output `HarmonicTrapResult` aggregate** — the four outputs (two frequencies, two RMS
   voltages) are returned as one strongly-typed, structured-binding-friendly value. The two voltages
   cannot be accidentally swapped with the two frequencies because their *types* differ.
@@ -546,12 +546,6 @@ What each test guards:
   `emc::units::{Frequency,Time,Voltage}`, `emc::Result`, `emc::Error`/`ErrorCode`, the
   `require_positive` / `require_nonzero` / `in_range` validators, the `ValidatedCalculator` concept, and
   the `emc::test::approx` helper.
-- [`../03-quantities-and-units-mp-units.md`](../03-quantities-and-units-mp-units.md) — the mp-units
-  vocabulary and typed `Time` inputs.
-- [`../05-error-handling-and-validation.md`](../05-error-handling-and-validation.md) — the
-  `std::expected`/`ErrorCode` model.
-- [`../06-calculator-design-pattern.md`](../06-calculator-design-pattern.md) — the Input/Result/
-  `calculate`/`validate` triple and the multi-output, forward-only calculator shape.
 - [`05-component-resistance.md`](05-component-resistance.md) and
   [`03-component-capacitance.md`](03-component-capacitance.md) — sibling `emc::component` guides whose
   structure, naming, and test layout this guide mirrors.

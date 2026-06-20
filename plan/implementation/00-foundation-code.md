@@ -17,10 +17,6 @@ compare values with `emc::test::approx`.
 
 Design rationale lives in the top-level plan docs and is *cited*, not repeated:
 
-- [`../03-quantities-and-units-mp-units.md`](../03-quantities-and-units-mp-units.md) — mp-units vocabulary.
-- [`../04-constants-and-material-database.md`](../04-constants-and-material-database.md) — constants + materials single source of truth.
-- [`../05-error-handling-and-validation.md`](../05-error-handling-and-validation.md) — `Error`/`ErrorCode`/`std::expected`.
-- [`../06-calculator-design-pattern.md`](../06-calculator-design-pattern.md) — the Input/Result/`calculate` triple + `Calculator` concept.
 - [`../09-testing-and-golden-vectors.md`](../09-testing-and-golden-vectors.md) — reference-vector harness and tolerances.
 
 ---
@@ -1101,15 +1097,6 @@ Every one of the 15 calculator guides follows this recipe, reusing the canonical
 
 ## Cross-references
 
-- [`../03-quantities-and-units-mp-units.md`](../03-quantities-and-units-mp-units.md) — the mp-units
-  vocabulary, the dimensionless `mu_r`/`eps_r` and `Decibel`/`Dbm` rationale, and how `.in(unit)` /
-  `numerical_value_in(unit)` give unit-safe conversions.
-- [`../04-constants-and-material-database.md`](../04-constants-and-material-database.md) — full
-  derivation of the constant values and the material table this file encodes.
-- [`../05-error-handling-and-validation.md`](../05-error-handling-and-validation.md) — the
-  `Error`/`ErrorCode`/`std::expected` model.
-- [`../06-calculator-design-pattern.md`](../06-calculator-design-pattern.md) — the Input/Result/
-  `calculate`/`validate` triple and the `Calculator` concept every guide instantiates.
 - [`../08-build-system-cmake.md`](../08-build-system-cmake.md) — install/export, mp-units PUBLIC
   propagation, Catch2 discovery, and the `tests/reference/` copy step.
 - [`../09-testing-and-golden-vectors.md`](../09-testing-and-golden-vectors.md) — the reference-vector

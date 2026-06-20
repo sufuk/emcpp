@@ -73,7 +73,7 @@ using emc::units::Length;
 //  Input — geometry arrives as typed mp-units Length/Frequency, so no unit
 //  factor tables are needed at the boundary. The complex relative permeability
 //  is carried as TWO dimensionless doubles (mu_r' real, mu_r'' imag), matching
-//  the canonical "mu_r is a double" rule (doc 03 §3). Defaults give a sensible
+//  the canonical "mu_r is a double" rule (see 00-foundation-code.md). Defaults give a sensible
 //  representative toroid so a bare `FerriteToroidInput{}` computes a valid case.
 // ---------------------------------------------------------------------------
 struct FerriteToroidInput {
@@ -108,7 +108,7 @@ struct FerriteToroidResult {
 
 // ---------------------------------------------------------------------------
 //  Calculator-concept binding: the (Input, Result, calculate) triple checked at
-//  compile time, so a signature drift is a hard error AT THIS HEADER (doc 06 §1e).
+//  compile time, so a signature drift is a hard error AT THIS HEADER (see 00-foundation-code.md).
 // ---------------------------------------------------------------------------
 struct FerriteToroid {
     using Input  = FerriteToroidInput;
@@ -144,7 +144,7 @@ using namespace mp_units::si::unit_symbols;   // m, Hz, H, ohm, ...
 // ---------------------------------------------------------------------------
 //  validate() — every precondition is a typed, range-bearing Error. Without
 //  these guards, a=0 or b<=0 would compute ln(b/a) as -inf/nan and flow
-//  silently into X/R/Z (doc 05 §1).
+//  silently into X/R/Z (see 00-foundation-code.md error model).
 // ---------------------------------------------------------------------------
 std::expected<void, emc::Error> validate(const FerriteToroidInput& in) {
     // Extract numeric values in the fields' SI base units for range reporting.
@@ -226,7 +226,7 @@ emc::Result<FerriteToroidResult> calculate(const FerriteToroidInput& in) {
   `{.mu_r_real = 100, .mu_r_imag = 50, ...}` self-documenting, so the real/imaginary permeability
   parts can never be swapped by position.
 - **Two `double` fields for the complex permeability (`mu_r_real`, `mu_r_imag`)** — the canonical API
-  models `μ_r` as a *dimensionless double* (doc 03 §3); a ferrite's permeability is the complex pair
+  models `μ_r` as a *dimensionless double* (see 00-foundation-code.md); a ferrite's permeability is the complex pair
   `μ′ − jμ″`, so two doubles carry it directly. The empirical formula uses the parts independently
   (`X` from `μ′`, `R` from `μ″`), so two named scalars read more clearly and keep the `Input` a trivial
   aggregate. (A `std::complex<double>` would also work but buys nothing for this closed form.)
@@ -441,12 +441,6 @@ non-positive-frequency guard; (g) the `b==a` zero boundary.
   `units.hpp` / `calculator.hpp` and `tests/support/` helpers reused here (`emc::constants::{pi, mu0}`,
   `emc::units::{Length, Frequency, Inductance, Impedance}`, `emc::test::approx`, `emc::in_range` /
   `require_positive`, `emc::domain_error`).
-- [`../03-quantities-and-units-mp-units.md`](../03-quantities-and-units-mp-units.md) — why `μ_r′`/`μ_r″`
-  are dimensionless doubles and how typed `Length`/`Frequency` give compile-time unit safety.
-- [`../05-error-handling-and-validation.md`](../05-error-handling-and-validation.md) — the
-  `Error`/`ErrorCode`/`std::expected` model this calculator's `validate()` uses.
-- [`../06-calculator-design-pattern.md`](../06-calculator-design-pattern.md) — the
-  Input/Result/`calculate`/`validate` triple and the `ValidatedCalculator` concept this header binds to.
 - [`04-component-inductance.md`](04-component-inductance.md) — the **geometric** toroid inductance
   (`emc::component::toroid_inductance`), which shares the `L = (μ₀N²h/2π)·ln(b/a)` core; this filtering
   calculator extends it with the complex-permeability `X`/`R`/`|Z|` impedance split.

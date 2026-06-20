@@ -1372,15 +1372,6 @@ constant-evaluable, the strongest guard against a `c` regression.
 
 - [`00-foundation-code.md`](./00-foundation-code.md) — the canonical `error.hpp` / `constants.hpp` /
   `units.hpp` / `materials.hpp` / `calculator.hpp` and the `tests/support/` (`approx`) helpers reused above.
-- [`../03-quantities-and-units-mp-units.md`](../03-quantities-and-units-mp-units.md) — the mp-units
-  vocabulary, the dimensionless `mu_r`/`eps_r` rule, and the typed `Decibel`/`Dbm` wrappers.
-- [`../04-constants-and-material-database.md`](../04-constants-and-material-database.md) — the
-  conductivity/μ_r table behind Skin Depth and the `c`/`mu0`/`pi` constants the antenna and far-field
-  formulas consume.
-- [`../05-error-handling-and-validation.md`](../05-error-handling-and-validation.md) — the `Error` /
-  `ErrorCode` / `std::expected` model.
-- [`../06-calculator-design-pattern.md`](../06-calculator-design-pattern.md) — the Input/Result/`calculate`
-  triple, the bidirectional `*_from_*` convention, and the `Calculator` / `ValidatedCalculator` concepts.
 - [`../07-calculator-inventory.md`](../07-calculator-inventory.md) — the SPEC rows (naming, placement,
   validation ranges).
 - [`../09-testing-and-golden-vectors.md`](../09-testing-and-golden-vectors.md) — the `emc::test::approx`

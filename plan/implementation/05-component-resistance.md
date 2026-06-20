@@ -16,7 +16,7 @@ All four land in namespace **`emc::component`** with a shared public header
 All four share the **same physics**: a DC resistance `R_dc = ρ·l / A`, a skin depth
 `δ = 1 / √(π·f·μ·σ)`, and a branch that swaps `A` for an effective skin-limited cross-section `A_eff`
 when `δ` is small compared to the conductor's geometry. Material lookup goes through `emc::materials`
-+ `emc::Result` ([doc 04](../04-constants-and-material-database.md)).
++ `emc::Result` (see [`00-foundation-code.md`](./00-foundation-code.md) for the material database).
 
 > [!NOTE]
 > This guide reuses the canonical surface in [`00-foundation-code.md`](./00-foundation-code.md):
@@ -50,8 +50,8 @@ The calculators differ only in:
 
 So the math factors into one private `detail::resistance_from_geometry(...)` core taking the
 already-computed `A`, `perimeter`, and `δ`-threshold, shared by all four free functions — the
-"distinct named free functions sharing a `detail::` core" shape of
-[doc 06](../06-calculator-design-pattern.md).
+"distinct named free functions sharing a `detail::` core" shape of the calculator pattern in
+[`00-foundation-code.md`](./00-foundation-code.md).
 
 ### The shared `detail::` core (one copy for all four)
 
@@ -951,7 +951,7 @@ diameter law at its 36-AWG anchor plus a handbook 0-AWG value; **(c)** an indepe
 ## Concept binding for all four (bottom of `resistance.hpp`)
 
 Each calculator gets a zero-data tag struct + `static_assert` so the `emc::Calculator` contract is a
-compile-time tripwire in the header ([doc 06](../06-calculator-design-pattern.md)):
+compile-time tripwire in the header (see [`00-foundation-code.md`](./00-foundation-code.md) for the calculator pattern):
 
 ```c++
 // include/emc/component/resistance.hpp  (bottom, inside namespace emc::component)
@@ -999,8 +999,4 @@ static_assert(emc::ValidatedCalculator<StandardGaugeWire>);
 - [`00-foundation-code.md`](./00-foundation-code.md) — `emc::constants` (`pi`, `mu0`), `emc::units`,
   `emc::materials::Material`/`properties()`, `emc::Result`, the validators, the `Calculator` concept, and
   `emc::test::approx`. This guide reuses those names verbatim.
-- [`../04-constants-and-material-database.md`](../04-constants-and-material-database.md) — the material
-  table backing `resolve_material`.
-- [`../06-calculator-design-pattern.md`](../06-calculator-design-pattern.md) — the Input/Result/`calculate`/
-  `validate` triple, the shared-`detail::`-core pattern, and the `Calculator` concept these four bind to.
 - [`../09-testing-and-golden-vectors.md`](../09-testing-and-golden-vectors.md) — the testing workflow.

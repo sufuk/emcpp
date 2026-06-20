@@ -11,8 +11,8 @@ Code-level implementation (header + `.cpp` + tests) for the five `emc::converter
 | VSWR / RC / RL / ML / IL (multi-output) | `include/emc/converter/vswr.hpp` | `src/converter/vswr.cpp` | `tests/converter/vswr_test.cpp` |
 
 All five live in `namespace emc::converter` and follow the canonical Input/Result/`calculate` triple from
-[`../06-calculator-design-pattern.md`](../06-calculator-design-pattern.md), reusing the foundation surface
-from [`00-foundation-code.md`](00-foundation-code.md): `emc::constants::{c,h}`, the `emc::units::*` quantity
+[`00-foundation-code.md`](00-foundation-code.md), reusing the foundation surface
+there: `emc::constants::{c,h}`, the `emc::units::*` quantity
 aliases, `emc::Result<T>` / `emc::ErrorCode`, the `in_range` / `require_positive` validators, and the
 `emc::test::approx` helper. The two bidirectional converters (Energy↔Frequency, Wavelength↔Frequency) are
 **distinctly named free functions sharing a `detail::` core**.
@@ -982,10 +982,3 @@ Test guards: (a) a textbook `VSWR = 2` case; (b) all four figures against the cl
 - [`00-foundation-code.md`](00-foundation-code.md) — the canonical `emc::constants::{c,h}`, the
   `emc::units::*` quantity aliases, `emc::Result` / `emc::ErrorCode`, the `require_positive` /
   `require_nonzero` validators, and `emc::test::approx`.
-- [`../03-quantities-and-units-mp-units.md`](../03-quantities-and-units-mp-units.md) — typed quantities for
-  unit selection at the boundary; the `Decibel`/`Dbm` log-wrapper rationale.
-- [`../05-error-handling-and-validation.md`](../05-error-handling-and-validation.md) — the `std::expected`
-  + `ErrorCode` model these converters use for out-of-domain inputs.
-- [`../06-calculator-design-pattern.md`](../06-calculator-design-pattern.md) — the Input/Result/`calculate`
-  triple and the **bidirectional ⇒ named `solve_*` free functions sharing a `detail::` core** pattern used by
-  Energy↔Frequency and Wavelength↔Frequency.

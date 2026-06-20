@@ -1,8 +1,8 @@
 # Calculator Catalog & Library Map 📐
 
 Authoritative catalog of every calculator in the `emc` library, mapped to its target location. **51 calculators**
-across nine categories. Conventions follow the locked design (`01-architecture-and-layout.md`,
-`06-calculator-design-pattern.md`):
+across nine categories. Conventions follow the locked design (`01-architecture-and-layout.md` and
+[`implementation/00-foundation-code.md`](implementation/00-foundation-code.md)):
 
 - Each calculator is a **free function** `calculate(const Input&) -> std::expected<Result, emc::Error>` in a
   category namespace, with aggregate `Input`/`Result` structs and — where inputs have a bounded physical
@@ -252,7 +252,6 @@ generalizing the receiver to N stages with no fixed-arity API.
 
 ## Cross-references
 
-`01-architecture-and-layout.md` (layout), `03-quantities-and-units-mp-units.md` (typed quantities),
-`04-constants-and-material-database.md` (constants/materials), `05-error-handling-and-validation.md`
-(`expected`/`validate`), `06-calculator-design-pattern.md` (Input/Result/calculate/validate pattern),
+`01-architecture-and-layout.md` (layout), [`implementation/00-foundation-code.md`](implementation/00-foundation-code.md)
+(typed quantities, constants/materials, `expected`/`validate`, and the Input/Result/calculate/validate pattern — as code),
 `09-testing-and-golden-vectors.md` (reference vectors).

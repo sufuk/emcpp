@@ -193,13 +193,13 @@ microstrip_current_distribution(const MicrostripCurrentInput& in) {
   `mm = 0.001` / `mils = 0.0000254` factor table to mistype.
 - **`emc::constants::pi` (= `std::numbers::pi`)** — the normalization constant routes through the single
   Foundation `pi`, so every calculator shares one full-precision π value
-  (Foundation §2; [doc 04 §1.2](../04-constants-and-material-database.md)).
+  (Foundation §2; see [`00-foundation-code.md`](00-foundation-code.md) for the constants).
 - **`std::expected` + `ErrorCode` (`emc::Result`)** — calculator inputs have physical domains, so an
   out-of-domain input is reported as a recoverable typed error rather than producing `inf`. `w ≤ 0` is a
   typed `ErrorCode::OutOfRange` and `h == 0` a typed `ErrorCode::DivisionByZero`, each a `[[nodiscard]]`
-  value the caller must handle ([doc 05](../05-error-handling-and-validation.md)).
+  value the caller must handle (see [`00-foundation-code.md`](00-foundation-code.md) for the error model).
 - **Monadic `std::expected::transform`** — composes "validate, then compute" into a single expression
-  that short-circuits on the first failure ([doc 06](../06-calculator-design-pattern.md)).
+  that short-circuits on the first failure (see [`00-foundation-code.md`](00-foundation-code.md) for the calculator pattern).
 - **Designated initializers on `Input`/`Result`** — call sites read
   `{ .source_current = 5*mA, .trace_width = 64.9*mm, .height = 57.4*mm, .position = 25.6*mm }`,
   self-documenting each value rather than relying on positional argument order.
@@ -463,12 +463,5 @@ static_assert(emc::ValidatedCalculator<emc::grounding::MicrostripCurrentDistribu
 - [`00-foundation-code.md`](00-foundation-code.md) — canonical `emc::constants::pi`,
   `emc::units::{Current, Length, MagneticField}`, `emc::Result`, the `require_positive`/`require_nonzero`
   validators, and the `emc::test::approx` helper this guide reuses verbatim.
-- [`../03-quantities-and-units-mp-units.md`](../03-quantities-and-units-mp-units.md) — why
-  `I₀`/`w`/`h`/`x` become mp-units quantities.
-- [`../05-error-handling-and-validation.md`](../05-error-handling-and-validation.md) — the
-  `Error`/`ErrorCode`/`std::expected` model behind the div-by-zero guards.
-- [`../06-calculator-design-pattern.md`](../06-calculator-design-pattern.md) — the
-  Input/Result/`calculate`/`validate` triple and the `Calculator`/`ValidatedCalculator` concepts the tag
-  struct satisfies.
 - [`../07-calculator-inventory.md`](../07-calculator-inventory.md) §8 — the spec row fixing the namespace,
   header, function name, and formula.

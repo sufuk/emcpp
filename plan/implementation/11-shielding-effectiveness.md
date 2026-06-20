@@ -146,11 +146,11 @@ emc::Result<ApertureResult> calculate(const ApertureInput& in) {
 
 - **mp-units `Length` inputs + `numerical_value_in(in)`** — aperture geometry spans m..mils across callers,
   so a single `numerical_value_in(in)` call performs the exact conversion. A caller passes `2.0 * mm` or
-  `0.1 * in`; no hand-rolled conversion factor can be wrong (doc 03 §1).
+  `0.1 * in`; no hand-rolled conversion factor can be wrong (see 00-foundation-code.md for the units vocabulary).
 - **`enum class ApertureShape`** — the slot-vs-round choice is a typed, exhaustively-switchable value the
   caller states explicitly, rather than a runtime boolean flag.
 - **`emc::units::Decibel` wrapper** — AL is a logarithmic dB value, so it is modeled as `Decibel`, never a
-  linear mp-units unit (doc 03 §9); it cannot be accidentally added to a power in watts.
+  linear mp-units unit (see 00-foundation-code.md for the units vocabulary); it cannot be accidentally added to a power in watts.
 - **`std::expected` + `validate()`** — aperture geometry has a physical domain (positive lengths), so an
   out-of-domain input (`w = 0`, which would otherwise yield `inf`) is reported as a recoverable
   `ErrorCode::OutOfRange` typed error.
@@ -464,7 +464,7 @@ near_field_se(materials::Material material, double mu_r,
 ### 4. Modern C++ features used here — and why
 
 - **`emc::constants::pi`** — Near-Field and Plane-Wave use the *identical* full-precision π in the shared
-  `N_s` term, so two calculators that share physics cannot drift apart (doc 04 §1.2).
+  `N_s` term, so two calculators that share physics cannot drift apart (see 00-foundation-code.md for the constants).
 - **`emc::constants::{eps0,mu0}`** — the CODATA values are a single source of truth, dimension-checked at
   the boundary via `numerical_value_in`, rather than magic numbers welded into the `Zw` expressions.
 - **mp-units `Conductivity`/`Length`/`Frequency` inputs** — EMC inputs span Hz..GHz and m..mils, so a
@@ -473,7 +473,7 @@ near_field_se(materials::Material material, double mu_r,
   unspecified or ambiguous branch can never reach the math.
 - **`std::expected` monadic `and_then`** — `near_field_se()` chains `materials::properties()` into
   `calculate()` so an unknown material short-circuits to `ErrorCode::UnknownMaterial` without an
-  `if (props)` ladder (doc 05 §4).
+  `if (props)` ladder (see 00-foundation-code.md for the error model).
 - **`emc::units::Decibel` for all three outputs** — keeps the dB results out of the linear unit system.
 - **`std::expected` + `validate()`** — calculator inputs have physical domains, so the numeric guards
   (σ, t, r, f > 0) report an out-of-domain input as a recoverable typed error and keep `log10` from
@@ -747,7 +747,7 @@ plane_wave_se(materials::Material material, double mu_r,
 ### 4. Modern C++ features used here — and why
 
 - **`emc::constants::pi`** — the reflection term uses full-precision π, identical to the Near-Field
-  calculator, so the two never disagree on shared physics (doc 04 §1.2).
+  calculator, so the two never disagree on shared physics (see 00-foundation-code.md for the constants).
 - **mp-units `Conductivity`/`Length`/`Frequency` inputs** — EMC inputs span wide physical ranges, so the
   caller's unit literal (`40 * mil`, `1 * MHz`) is converted exactly with compile-time safety.
 - **Shared skin-depth shape** — Plane-Wave and Near-Field compute δ and `Ns` with the same closed form
@@ -997,7 +997,7 @@ emc::Result<SlotSeResult> calculate(const SlotSeInput& in) {
   rather than a rounded approximation (inventory bug #2).
 - **mp-units `c / frequency` → `Length`** — λ is computed as a *dimensioned* division, so the result is a
   real `Length`, and the caller supplies frequency and length in any unit literal plus `.in(m)`. A wrong
-  conversion factor cannot recur (doc 03 §7).
+  conversion factor cannot recur (see 00-foundation-code.md for the units vocabulary).
 - **Two-field `SlotSeResult`** — both outputs (λ and SE) are returned as one value with their units in the
   type.
 - **`emc::units::Decibel`** — SE is dB; the wrapper keeps it out of the linear unit system and lets it
@@ -1128,13 +1128,5 @@ TEST_CASE("slot SE rejects zero length", "[shielding][slot][validation]") {
 - [`00-foundation-code.md`](00-foundation-code.md) — `Error`/`Result`, `require_positive`,
   `emc::constants::{pi,c,mu0,eps0,z0}`, `emc::units::{Length,Frequency,Conductivity,Decibel}`,
   `emc::materials::properties`, and the `emc::test::{load_csv,approx}` helpers.
-- [`../03-quantities-and-units-mp-units.md`](../03-quantities-and-units-mp-units.md) — typed quantities and
-  the `Decibel` log wrapper.
-- [`../04-constants-and-material-database.md`](../04-constants-and-material-database.md) — `emc::constants`
-  and the canonical material conductivity table.
-- [`../05-error-handling-and-validation.md`](../05-error-handling-and-validation.md) — the `std::expected`
-  validation channel.
-- [`../06-calculator-design-pattern.md`](../06-calculator-design-pattern.md) — the Input/Result/
-  `calculate`/`validate` triple and the `Calculator`/`ValidatedCalculator` concepts.
 - [`../09-testing-and-golden-vectors.md`](../09-testing-and-golden-vectors.md) — the reference-CSV harness
   and the tolerance model.

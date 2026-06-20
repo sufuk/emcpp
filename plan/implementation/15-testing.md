@@ -64,7 +64,7 @@ namespace emc::testing {
 // ---------------------------------------------------------------------------
 //  Stage — one element of the receiver cascade. Both fields are logarithmic
 //  (dB) values, modeled with the pinned emc::units::Decibel wrapper (NOT a
-//  linear mp-units unit; see foundation §3 / plan doc 03 §9).
+//  linear mp-units unit; see 00-foundation-code.md for the units vocabulary).
 //
 //  A whole cascade is just a std::span<const Stage>, so 2/3/N stages cost the
 //  same.
@@ -204,8 +204,8 @@ emc::Result<NoiseFigureResult> calculate(const NoiseFigureInput& in) {
 
 - **`std::span<const Stage>` input** — the single highest-value design choice. EMC receiver chains have
   no fixed stage count, so a span lets one `calculate()` serve 1, 2, 3, or 100 stages while the caller
-  picks the storage (array, vector, …). No stage-count ceiling, no stringly-typed count. (doc 06 §3,
-  doc 02 — "span for noise cascades".)
+  picks the storage (array, vector, …). No stage-count ceiling, no stringly-typed count. (see
+  00-foundation-code.md for the calculator pattern, doc 02 — "span for noise cascades".)
 - **Aggregate `Stage` / `NoiseFigureInput` + designated initializers** — call sites read
   `Stage{.nf = Decibel{1.0}, .gain = Decibel{20.0}}`; the field name *is* the documentation of which dB
   value is which, so adjacent same-typed values can't be transposed by accident.
@@ -463,9 +463,5 @@ TEST_CASE("NoiseFigure two-stage value is stable", "[testing][noise_figure][cons
 - [`00-foundation-code.md`](00-foundation-code.md) — `emc::Result`, `emc::Error`/`ErrorCode`,
   `emc::invalid_input`, the `emc::units::Decibel`/`to_ratio` log wrappers, the `emc::Calculator`/
   `ValidatedCalculator` concepts, and the `emc::test::approx` helper.
-- [`../03-quantities-and-units-mp-units.md`](../03-quantities-and-units-mp-units.md) §9 — why dB/dBm
-  are typed log wrappers (`Decibel`/`Dbm`) and never linear mp-units units.
-- [`../06-calculator-design-pattern.md`](../06-calculator-design-pattern.md) — the Input/Result/
-  `calculate`/`validate` triple and the `std::span` cascade modeling.
 - [`../09-testing-and-golden-vectors.md`](../09-testing-and-golden-vectors.md) — the test harness and
   tolerance policy.
