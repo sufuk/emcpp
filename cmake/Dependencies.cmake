@@ -3,13 +3,15 @@ include(FetchContent)
 
 find_package(mp-units CONFIG QUIET)
 if(NOT mp-units_FOUND)
+    # These options are read by mp-units' own CMakeLists, so set them BEFORE MakeAvailable:
+    set(MP_UNITS_API_CONTRACTS NONE CACHE STRING "" FORCE)   # no gsl-lite / ms-gsl transitive dep
+    set(MP_UNITS_BUILD_CXX_MODULES OFF CACHE BOOL "" FORCE)  # headers, not C++20 modules
     FetchContent_Declare(mp-units
         GIT_REPOSITORY https://github.com/mpusz/mp-units.git
         GIT_TAG        v2.5.0          # pinned for reproducibility
         GIT_SHALLOW    TRUE
-        SYSTEM)                        # treat headers as -isystem
-    set(MP_UNITS_BUILD_CXX_MODULES OFF CACHE BOOL "" FORCE)
-    set(MP_UNITS_BUILD_AS_SYSTEM_HEADERS ON CACHE BOOL "" FORCE)
+        SOURCE_SUBDIR  src             # mp-units' real entry point is src/, not the repo root
+        SYSTEM)                        # treat its headers as -isystem
     FetchContent_MakeAvailable(mp-units)
 endif()
 

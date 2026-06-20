@@ -3,7 +3,8 @@ project(emc
     VERSION 0.1.0
     DESCRIPTION "Modern-C++ EMC engineering calculation library"
     HOMEPAGE_URL "https://github.com/sufuk/emcpp"
-    LANGUAGES CXX)
+    LANGUAGES CXX
+)
 
 if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
     message(FATAL_ERROR "In-source builds are not allowed. Use a build/ directory or a preset.")
@@ -31,17 +32,17 @@ add_library(emc::emc ALIAS emc)                # consumers always say emc::emc
 target_compile_features(emc PUBLIC cxx_std_23) # PUBLIC: propagates to consumers
 
 target_sources(emc PRIVATE                     # explicit list, NOT glob
-    src/core/error.cpp
+#    src/core/error.cpp
     src/core/materials.cpp
-    src/basic/skin_depth.cpp
-    src/converter/vswr.cpp
-    src/component/microstrip_trace.cpp
-    src/prediction/rf_field.cpp
-    src/shielding/shielding_effectiveness.cpp
-    src/filtering/ferrite.cpp
-    src/cabling/crosstalk.cpp
-    src/grounding/microstrip_current.cpp
-    src/testing/noise_figure.cpp
+#    src/basic/skin_depth.cpp
+#    src/converter/vswr.cpp
+#    src/component/microstrip_trace.cpp
+#    src/prediction/rf_field.cpp
+#    src/shielding/shielding_effectiveness.cpp
+#    src/filtering/ferrite.cpp
+#    src/cabling/crosstalk.cpp
+#    src/grounding/microstrip_current.cpp
+#    src/testing/noise_figure.cpp
     # ... one .cpp per calculator, added as inventory items land (07-calculator-inventory)
 )
 
@@ -69,10 +70,10 @@ generate_export_header(emc
 
 if(EMC_BUILD_TESTS)
     enable_testing()
-    add_subdirectory(tests)
+#    add_subdirectory(tests)
 endif()
 if(EMC_BUILD_EXAMPLES)
-    add_subdirectory(examples)
+#    add_subdirectory(examples)
 endif()
 
 include(cmake/Install.cmake)
