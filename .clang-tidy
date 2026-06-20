@@ -1,0 +1,6 @@
+# .clang-tidy
+Checks: >
+  -*, bugprone-*, cppcoreguidelines-*, modernize-*, performance-*,
+  readability-*, misc-include-cleaner, -modernize-use-trailing-return-type
+WarningsAsErrors: 'bugprone-*'
+HeaderFilterRegex: 'include/emc/.*'

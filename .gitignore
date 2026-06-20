@@ -1,1 +1,24 @@
+# Build & configure output
+/build/
+/out/
+/install/
 /cmake-build-debug/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+compile_commands.json
+
+# Per-developer presets (never committed)
+CMakeUserPresets.json
+
+# Caches
+.cache/
+.ccache/
+
+# IDE / editor
+.idea/
+.vscode/
+.vs/
+*.swp
+*~
+.DS_Store

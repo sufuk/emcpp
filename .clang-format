@@ -1,0 +1,6 @@
+# .clang-format
+BasedOnStyle: LLVM
+Standard: c++23
+ColumnLimit: 100
+PointerAlignment: Left
+IndentWidth: 4

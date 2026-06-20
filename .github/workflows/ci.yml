@@ -1,0 +1,57 @@
+# .github/workflows/ci.yml
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  gui-free-gate:
+    name: GUI-free gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fail if any GUI-toolkit header leaks into the library
+        run: |
+          if grep -rEni '#include[[:space:]]*<[^>]*(gtk|gui|window|x11|cocoa|wx)' include/ src/; then
+            echo "ERROR: GUI-toolkit symbols found in the GUI-free emc library" >&2
+            exit 1
+          fi
+          echo "OK: no GUI-toolkit headers in include/ or src/"
+
+  build-and-test:
+    name: Build & test (debug)
+    runs-on: ubuntu-latest
+    needs: gui-free-gate
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build cmake g++-14
+          echo "CXX=g++-14" >> "$GITHUB_ENV"
+      - name: Configure
+        run: cmake --preset debug
+      - name: Build
+        run: cmake --build --preset debug
+      - name: Test
+        run: ctest --preset debug
+
+  sanitizers:
+    name: Sanitizers (ASan/UBSan)
+    runs-on: ubuntu-latest
+    needs: gui-free-gate
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build cmake clang-18
+          echo "CXX=clang++-18" >> "$GITHUB_ENV"
+      - name: Configure
+        run: cmake --preset asan
+      - name: Build
+        run: cmake --build --preset asan
+      - name: Test (sanitized)
+        run: ctest --preset asan
