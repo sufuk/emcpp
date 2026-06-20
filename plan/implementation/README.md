@@ -122,8 +122,6 @@ one of these guides.
 
 ## Cross-references (top-level plan, the "why" at depth)
 
-- [`../02-modern-cpp-feature-catalog.md`](../02-modern-cpp-feature-catalog.md) — the C++23 feature
-  catalog the per-calculator "features used here — and why" bullets draw from.
 - [`../03-quantities-and-units-mp-units.md`](../03-quantities-and-units-mp-units.md) — the mp-units
   vocabulary and the `emc::units` aliases.
 - [`../04-constants-and-material-database.md`](../04-constants-and-material-database.md) —

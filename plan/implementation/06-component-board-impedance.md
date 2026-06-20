@@ -1367,8 +1367,6 @@ guard; **(d)** `constexpr`.
 - [`00-foundation-code.md`](00-foundation-code.md) — the canonical `emc::units::*`, `emc::Result`,
   `emc::in_range`/`require_positive`/`require_nonzero`, `emc::ErrorCode`, `emc::domain_error`,
   `emc::Calculator`/`ValidatedCalculator`, and the `emc::test::approx` helper reused above.
-- [`../02-modern-cpp-feature-catalog.md`](../02-modern-cpp-feature-catalog.md) — typed mp-units inputs as
-  the catalog's headline example of compile-time unit safety.
 - [`../03-quantities-and-units-mp-units.md`](../03-quantities-and-units-mp-units.md) — `Length` aliases,
   `numerical_value_in`/`.in(...)`, and the `mil` unit pattern.
 - [`../05-error-handling-and-validation.md`](../05-error-handling-and-validation.md) — `validate()`

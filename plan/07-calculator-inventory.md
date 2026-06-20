@@ -1,29 +1,24 @@
 # Calculator Catalog & Library Map 📐
 
 Authoritative catalog of every calculator in the `emc` library, mapped to its target location. **51 calculators**
-across nine categories.
-
-Conventions follow the locked design decisions (see `01-architecture-and-layout.md` and
+across nine categories. Conventions follow the locked design (`01-architecture-and-layout.md`,
 `06-calculator-design-pattern.md`):
 
-- Each calculator is a **free function** `calculate(const Input&) -> std::expected<Result, emc::Error>` inside a
-  category namespace, with an aggregate `Input` struct, a `Result` struct, and — where inputs have a bounded
-  physical domain — a `validate(const Input&) -> std::expected<void, emc::Error>`.
-- Header path mirrors the namespace: `include/emc/<category>/<snake_name>.hpp`; implementation in
-  `src/<category>/<snake_name>.cpp`.
-- All physical quantities are `mp-units` `quantity<>` types (see `03-quantities-and-units-mp-units.md`), never
-  bare `double`. The Inputs/Outputs columns name the **physical** quantity; the SI unit shown is the canonical
-  storage unit.
+- Each calculator is a **free function** `calculate(const Input&) -> std::expected<Result, emc::Error>` in a
+  category namespace, with aggregate `Input`/`Result` structs and — where inputs have a bounded physical
+  domain — a `validate(const Input&) -> std::expected<void, emc::Error>`.
+- Header mirrors the namespace: `include/emc/<category>/<snake_name>.hpp`; impl in `src/<category>/<name>.cpp`.
+- All physical quantities are `mp-units` `quantity<>` types — never bare `double`. The Inputs/Outputs columns
+  name the **physical** quantity; the SI unit shown is the canonical storage unit.
 
 > [!NOTE]
-> Per-category tables share columns: **Calculator | Inputs (with units) | Output(s) (with units) | Core
-> formula | Solve directions | Validity constraints | Material? | Library location**. The "Material?" column
-> marks calculators that read a conductivity/permeability/resistivity table.
+> Per-category tables share columns: **Calculator | Inputs | Output(s) | Core formula | Solve directions |
+> Validity constraints | Material? | Library location**. "Material?" marks calculators that read a
+> conductivity/permeability/resistivity table.
 
-> [!TIP]
-> Modeling each calculator as `calculate(Input) -> expected<Result>` keeps them pure functions of their inputs:
-> trivially thread-safe, constexpr-friendly, and directly drivable from a generic front end (e.g. printing
-> results with `std::print`) with no UI dependency.
+Modeling each calculator as `calculate(Input) -> expected<Result>` keeps them pure functions of their inputs:
+trivially thread-safe, constexpr-friendly, and drivable from a generic front end (e.g. `std::print`) with no UI
+dependency.
 
 ---
 
@@ -37,27 +32,8 @@ Conventions follow the locked design decisions (see `01-architecture-and-layout.
 | Loop Antenna | current I₀ [A]; loop area A [m²]; distance R [m]; frequency [Hz]; angle θ [deg] | H_r [A/m]; H_θ [A/m]; E_φ [V/m] | H_r = (f/c)(I₀A/R²)cosθ√(1+(c/2πfR)²); E_φ = 120(πf/c)²(I₀A/R)sinθ√(…) | forward only (multi-output) | R, f > 0 | no | `emc::basic::loop_antenna` in `include/emc/basic/loop_antenna.hpp` |
 | Far-Field Criteria | frequency [Hz]; max dimension D [m] | wavelength λ [m]; reactive near-field [m]; radiating near-field [m] | λ = c/f; if D > λ/10: reactive = 0.62√(D³/λ), radiating = 2D²/λ; else reactive = λ/50, radiating = λ | forward only (branch on D vs λ/10) | f, D > 0 | no | `emc::basic::far_field_criteria` in `include/emc/basic/far_field_criteria.hpp` |
 
-**Modern C++ features used here / and why**
-
-- `mp-units` `quantity<>`: EMC inputs span Hz..GHz and m..mils, so compile-time unit safety prevents
-  silent scale errors (e.g. mixing mm and m in the far-field distance).
-- `std::expected<Result, Error>`: skin depth and the antenna formulas have physical domains (positive
-  frequency, positive distance), so an out-of-domain input is reported as a recoverable typed error rather
-  than producing `inf`/`nan`.
-
-**Example usage**
-
-```c++
-using namespace mp_units;
-using namespace mp_units::si::unit_symbols;
-
-const auto delta = emc::basic::skin_depth({
-    .frequency    = 1.0 * MHz,
-    .conductivity = 5.8e7 * (S / m),   // copper
-    .mu_r         = 1.0,
-});
-if (delta) std::print("skin depth = {}\n", delta->value);
-```
+Typed `quantity<>` inputs span Hz..GHz and m..mils, so compile-time unit safety prevents silent scale errors;
+`std::expected` reports out-of-domain inputs (non-positive f/R) as typed errors instead of `inf`/`nan`.
 
 ---
 
@@ -72,22 +48,11 @@ if (delta) std::print("skin depth = {}\n", delta->value);
 | VSWR / RC / RL / ML / IL | VSWR [-] | reflection coeff Γ [-]; return loss [dB]; mismatch loss [dB]; insertion loss [dB] | Γ = (VSWR−1)/(VSWR+1); RL = −20·log₁₀\|Γ\|; ML = −10·log₁₀(1−Γ²); IL = −10·log₁₀(\|1+Γ\|²) | forward only (multi-output) | VSWR ≥ 1 | no | `emc::converter::vswr` in `include/emc/converter/vswr.hpp` |
 
 > [!WARNING]
-> The VSWR family requires `validate` to enforce `VSWR ≥ 1`: at VSWR = 1, Γ = 0 and the return-loss term
-> `log₁₀\|Γ\|` diverges to −∞. The constraint makes the singular case a typed error instead of `-inf`.
+> The VSWR family needs `validate` to enforce `VSWR ≥ 1`: at VSWR = 1, Γ = 0 and `log₁₀\|Γ\|` diverges to −∞.
+> The constraint makes the singular case a typed error instead of `-inf`.
 
-**Modern C++ features used here / and why**
-
-- `std::expected`: converter inputs have physical domains (positive frequency, VSWR ≥ 1), so an
-  out-of-domain input is a recoverable typed error.
-- Bidirectional converters take a single `Input` carrying `std::optional<quantity>` for the unknown side,
-  so one function solves both directions without duplicated code.
-
-**Example usage**
-
-```c++
-const auto r = emc::converter::vswr({ .vswr = 2.0 });
-// Γ = 1/3, RL ≈ 9.54 dB, ML ≈ 0.51 dB
-```
+Bidirectional converters carry `std::optional<quantity>` for the unknown side, so one function solves both
+directions with no duplicated code.
 
 ---
 
@@ -103,9 +68,8 @@ transmission lines, and a harmonic trap.
 | Parallel Plate | area A [m²]; distance d [m] | capacitance C [F] | C = ε₀·A/d | forward only | d > 0 | no | `emc::component::parallel_plate_capacitance` in `include/emc/component/capacitance.hpp` |
 | Sphere | radius r [m] | capacitance C [F] | C = 4πε₀·r | forward only | r > 0 | no | `emc::component::sphere_capacitance` in `include/emc/component/capacitance.hpp` |
 
-> [!NOTE]
-> Writing the constants as `ε₀` keeps the geometric formula dimensionally exact under `mp-units`; the result
-> carries farads natively, so no manual pico-scaling is required.
+Writing the constants as `ε₀` keeps the formula dimensionally exact; the result carries farads natively, so no
+manual pico-scaling.
 
 ### 3b. Inductance
 
@@ -137,12 +101,8 @@ common resistivity lookup. All compute AC resistance via skin depth.
 > The AWG gauge string (`OOOO`→−3, `OOO`→−2, `OO`→−1, `O`→0, else integer) is parsed by a small helper
 > returning `std::expected<int, Error>`, so a malformed gauge becomes a typed error.
 
-**Modern C++ features used here / and why**
-
-- `std::expected<…, Error>` on the material lookup: a bad material is an out-of-domain input, so it returns a
-  recoverable typed error instead of a numeric sentinel that would silently corrupt resistivity.
-- A shared `emc::materials` lookup gives one source of truth for σ/ρ/μ_r, so all resistance calculators agree
-  on copper, aluminium, etc.
+A bad material returns a typed error from the lookup rather than a numeric sentinel; a shared `emc::materials`
+table is the one source of truth for σ/ρ/μ_r, so all resistance calculators agree on copper, aluminium, etc.
 
 ### 3d. Circuit Board Trace Impedance
 
@@ -158,33 +118,9 @@ parameters (H/T/W, plus C for the dual case).
 
 > [!TIP]
 > Because inputs arrive already typed (e.g. `quantity<si::milli<si::metre>>`), the mm-vs-mils conversion is a
-> single implicit cast — there is no per-direction unit branching. Model the solve targets with one `Input`
-> carrying `std::optional<quantity>` for the unknown, sharing a single `detail::` core.
-
-**Modern C++ features used here / and why**
-
-- `mp-units` typed inputs: trace dimensions span mm and mils, so a typed `quantity` makes the unit conversion
-  implicit and compile-time-checked instead of hand-coded.
-- `std::optional<quantity>` in the `Input`: the bidirectional solver expresses "this field is the unknown" in
-  the type, so one function covers all solve directions.
-- `validate(const Input&) -> std::expected<void, Error>`: the ε_r and W/H ranges are physical bounds, reported
-  as recoverable typed errors.
-
-**Example usage**
-
-```c++
-// forward: geometry → Z0
-const auto z = emc::component::microstrip_trace({
-    .h = 0.2 * mm, .t = 0.035 * mm, .w = 0.3 * mm, .eps_r = 4.4,
-    .solve_for = emc::component::Target::Z0,
-});
-
-// inverse: target Z0 → required width
-const auto wq = emc::component::microstrip_trace({
-    .h = 0.2 * mm, .t = 0.035 * mm, .z0 = 50.0 * ohm, .eps_r = 4.4,
-    .solve_for = emc::component::Target::W,
-});
-```
+> single implicit cast — no per-direction unit branching. Model the solve targets with one `Input` carrying
+> `std::optional<quantity>` for the unknown, sharing a single `detail::` core. The ε_r and W/H ranges are
+> physical bounds reported via `validate(...) -> std::expected<void, Error>`.
 
 ### 3e. Transmission Line Parameters
 
@@ -210,9 +146,7 @@ Seven calculators sharing the L/C/Z₀/R-per-length pattern.
 |---|---|---|---|---|---|:--:|---|
 | Harmonic Trap (waveform) | harmonic n; amplitude A_m [V]; transition time t_r [s]; period T [s]; duty cycle DC [%] | fundamental f₀ [Hz]; harmonic f [Hz]; amp of harmonic A_h [V_rms]; amp of envelope A_e [V_rms] | f₀ = 1/T; A_h = 1.414·A_m·(DC/100)·\|sinc(nπDC/100)\|·\|sinc(nπt_r/T)\|; envelope breakpoints at 1/(πτ) and 1/(πt_r) | forward only (multi-output, branch) | T > 0; 0 < DC ≤ 100 | no | `emc::component::harmonic_trap` in `include/emc/component/harmonic_trap.hpp` |
 
-> [!NOTE]
-> `t_r` and `T` are typed `quantity<isq::time>` inputs (s/ms/µs/ns convert implicitly). `validate` rejects
-> `DC = 0`, which would otherwise divide by zero.
+`t_r` and `T` are typed `quantity<isq::time>` (s/ms/µs/ns convert implicitly); `validate` rejects `DC = 0`.
 
 ---
 
@@ -241,11 +175,8 @@ Seven calculators sharing the L/C/Z₀/R-per-length pattern.
 | Cylindrical Enclosure | length l [m]; radius r [m]; ε_r | TM (x_mn) and TE mode frequencies [Hz] | f = (c/2π√ε_r)·√((x_mn/r)²+(pπ/l)²) with Bessel roots 2.405/3.832/5.520/7.016/5.135/… | forward only (multi-output) | l, r > 0 | no | `emc::shielding::cylindrical_cavity_modes` in `include/emc/shielding/cavity_resonance.hpp` |
 | Circuit Board Planes | length l [m]; width w [m]; thickness [m]; ε_r | mode frequencies f_mn [Hz] | f = (c/2√ε_r)·√((m/l)²+(n/w)²) with thin-plane guards | forward only (multi-output) | ε_r ≥ 1; thickness ≤ 0.1·dim | no | `emc::shielding::circuit_board_plane_modes` in `include/emc/shielding/cavity_resonance.hpp` |
 
-**Modern C++ features used here / and why**
-
-- The mode set is a `std::array<ModeFrequency, N>` (or an `std::mdspan` indexed by (m,n,p)) rather than a fixed
-  list of named outputs, so the cavity calculators return a clean, iterable result (see
-  `02-modern-cpp-feature-catalog.md`).
+The mode set is returned as a `std::array<ModeFrequency, N>` (or an `std::mdspan` indexed by (m,n,p)) rather than
+a fixed list of named outputs, giving a clean, iterable result.
 
 ### 5b. EM Shielding Effectiveness
 
@@ -258,19 +189,8 @@ Seven calculators sharing the L/C/Z₀/R-per-length pattern.
 
 > [!IMPORTANT]
 > Near-field and plane-wave SE share the same skin-depth and barrier-impedance physics, so both draw π and the
-> material σ/μ_r from the single `emc::constants` / `emc::materials` source. This keeps the two calculators
-> numerically consistent.
-
-**Example usage**
-
-```c++
-const auto se = emc::shielding::plane_wave_se({
-    .material  = emc::materials::copper,
-    .thickness = 0.5 * mm,
-    .frequency = 100.0 * MHz,
-});
-if (se) std::print("SE = {} dB\n", se->total_se);
-```
+> material σ/μ_r from the single `emc::constants` / `emc::materials` source, keeping the two numerically
+> consistent.
 
 ---
 
@@ -305,21 +225,8 @@ if (se) std::print("SE = {} dB\n", se->total_se);
 |---|---|---|---|---|---|:--:|---|
 | Noise Figure of an RF Receiver | per-stage NF [dB] and gain [dB] (N stages) | cascade noise figure [dB]; total gain [dB] | Friis cascade: F = F₁+(F₂−1)/G₁+(F₃−1)/(G₁G₂)…; NF = 10·log₁₀(F); G_total = ΣG_i (dB) | forward only (N-stage) | ≥ 1 stage | no | `emc::testing::noise_figure` in `include/emc/testing/noise_figure.hpp` |
 
-**Modern C++ features used here / and why**
-
-- `std::span<const Stage>` (each `{ nf_dB, gain_dB }`): the cascade is naturally variable-length, so a span
-  generalizes the receiver to N stages with no fixed-arity API (see `06-calculator-design-pattern.md`).
-
-**Example usage**
-
-```c++
-const std::array stages{
-    emc::testing::Stage{ .nf_dB = 1.0, .gain_dB = 15.0 },
-    emc::testing::Stage{ .nf_dB = 4.0, .gain_dB = 10.0 },
-    emc::testing::Stage{ .nf_dB = 6.0, .gain_dB =  5.0 },
-};
-const auto nf = emc::testing::noise_figure({ .stages = stages });
-```
+The cascade is naturally variable-length, so the input is a `std::span<const Stage>` (each `{ nf_dB, gain_dB }`),
+generalizing the receiver to N stages with no fixed-arity API.
 
 ---
 
@@ -339,17 +246,13 @@ const auto nf = emc::testing::noise_figure({ .stages = stages });
 | **TOTAL** | **51** |
 
 > [!NOTE]
-> Tests derive expected values from hand computation and textbook closed-form examples, complemented by
-> round-trip checks on the bidirectional converters/solvers, monotonicity and property checks, edge-case
-> domain rejection, and `constexpr` evaluation where the formula is constant-foldable. See
-> `09-testing-and-golden-vectors.md`.
+> Tests derive expected values from hand computation and textbook closed-form examples, plus round-trip checks
+> on bidirectional converters/solvers, monotonicity/property checks, edge-case domain rejection, and `constexpr`
+> evaluation where the formula is constant-foldable. See `09-testing-and-golden-vectors.md`.
 
 ## Cross-references
 
-- `01-architecture-and-layout.md` — namespace/directory layout these **Library location** cells follow.
-- `03-quantities-and-units-mp-units.md` — how typed quantities replace unit-conversion bookkeeping.
-- `04-constants-and-material-database.md` — the single source of truth for constants and material tables.
-- `05-error-handling-and-validation.md` — `emc::Error` / `std::expected` and the `validate` step.
-- `06-calculator-design-pattern.md` — the Input/Result/calculate/validate pattern; Skin Depth and Microstrip
-  Trace are the worked examples.
-- `09-testing-and-golden-vectors.md` — hand-computed and textbook reference vectors.
+`01-architecture-and-layout.md` (layout), `03-quantities-and-units-mp-units.md` (typed quantities),
+`04-constants-and-material-database.md` (constants/materials), `05-error-handling-and-validation.md`
+(`expected`/`validate`), `06-calculator-design-pattern.md` (Input/Result/calculate/validate pattern),
+`09-testing-and-golden-vectors.md` (reference vectors).

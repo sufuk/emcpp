@@ -915,8 +915,6 @@ the right typed `ErrorCode` on the right `field`; **(e)** the grid/labels are co
 - [`./00-foundation-code.md`](./00-foundation-code.md) — `emc::constants::c`/`pi`,
   `emc::units::{Length,Frequency}`, `emc::Result`, `emc::in_range`/`require_positive`/`domain_error`,
   `emc::test::{load_csv,approx}`.
-- [`../02-modern-cpp-feature-catalog.md`](../02-modern-cpp-feature-catalog.md) — the `std::array` /
-  `std::ranges::transform` entry these three calculators headline (many outputs → one table).
 - [`../03-quantities-and-units-mp-units.md`](../03-quantities-and-units-mp-units.md) — typed `Length` inputs
   and compile-time unit safety across m..mils.
 - [`../05-error-handling-and-validation.md`](../05-error-handling-and-validation.md) — `emc::Error` /
