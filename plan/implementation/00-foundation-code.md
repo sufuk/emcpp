@@ -54,11 +54,11 @@ emcpp/
 
 > [!NOTE]
 > **Why split `include/emc/core/` headers from compiled `src/`?** mp-units is template-heavy; the
-> decision (plan doc 03 §9) is a *compiled* library, not header-only, so the expensive quantity
+> decision is a *compiled* library, not header-only, so the expensive quantity
 > instantiations live in `src/*.cpp` and consumers pay only for the alias declarations they touch. The
 > core headers are deliberately algorithm-free. Almost everything is `constexpr`/`inline constexpr`, so
 > `materials.cpp` exists mainly as a home for any future non-`constexpr` helper and to anchor the CMake
-> target. See [`../08-build-system-cmake.md`](../08-build-system-cmake.md).
+> target. See [`16-build-and-scaffolding.md`](16-build-and-scaffolding.md).
 
 ---
 
@@ -134,7 +134,7 @@ struct Error {
     [[nodiscard]] const std::string& message_of() const noexcept { return message; }
 
     // Convenience one-liner for CLI/CI logs. A front end builds its own localized
-    // string from the structured fields (doc 05 §7); this is a fallback, not the path.
+    // string from the structured fields; this is a fallback, not the path.
     [[nodiscard]] std::string what() const {
         std::string s;
         s += '[';
@@ -260,7 +260,7 @@ require_nonzero(double v, std::string_view field,
   attribute turns "computed a value and discarded the failure" into a compiler warning.
 - **Aggregate `Error` + designated-initializer factories** — `out_of_range(...)` builds the struct
   with named fields, so the *valid range* (e.g. `[1, 15]` for permittivity) is structured data a front
-  end can echo verbatim, not free text buried in an `if` (doc 05 §2.2).
+  end can echo verbatim, not free text buried in an `if`.
 - **`std::source_location` defaulted in the factory args** — captures the raise site for diagnostics
   for free. It is never shown to end users.
 - **`std::optional<std::pair<double,double>>` for the range** — makes "no range applies" (e.g. a
@@ -273,7 +273,7 @@ require_nonzero(double v, std::string_view field,
 ## 2. `include/emc/core/constants.hpp`
 
 One place for every physical constant, as `inline constexpr` mp-units quantities with **correct** SI /
-CODATA values. A single namespaced definition per constant is the single source of truth (plan doc 04 §1).
+CODATA values. A single namespaced definition per constant is the single source of truth.
 
 ```c++
 // include/emc/core/constants.hpp
@@ -329,7 +329,7 @@ inline constexpr quantity elementary_charge = 1.602'176'634e-19 * (A * s);
 > **Why `inline constexpr`, not just `constexpr`?** A header-defined `constexpr` namespace-scope
 > variable has *internal* linkage by default — each translation unit gets its own copy and its own
 > address (an ODR foot-gun). `inline` (C++17 inline variables) gives one shared definition across the
-> whole program, which is exactly what "single source of truth" demands (doc 04 §2.2). The short names
+> whole program, which is exactly what "single source of truth" demands. The short names
 > `c`, `mu0`, `eps0`, `h`, `z0`, `pi` are the canonical contract used by every calculator guide.
 
 ### Compile-time sanity relations
@@ -379,11 +379,11 @@ static_assert(pi > 3.14159 && pi < 3.14160, "pi must be std::numbers::pi");
 ### Modern C++ features used here — and why
 
 - **`std::numbers::pi` (C++20)** — one namespaced, full-precision pi shared by every calculator, so
-  two formulas computing the same quantity agree to the last digit (doc 04 §1.2).
+  two formulas computing the same quantity agree to the last digit.
 - **mp-units `quantity` constants** — `c`, `mu0`, `eps0`, `h`, `z0` carry their unit in the type, so
   `c * frequency` is dimension-checked and a dimensionally wrong product cannot compile.
 - **`inline constexpr` variables (C++17)** — one ODR-clean definition; immutable compile-time values
-  with no init-order or data-race concern (doc 06 §5).
+  with no init-order or data-race concern.
 - **`static_assert` + C++23 `constexpr <cmath>`** — the electromagnetic identities
   (`c = 1/√(ε₀μ₀)`, `z0 = √(μ₀/ε₀) = μ₀c`) are *build-time invariants*. Edit one literal into an
   inconsistent set and the build fails (doc 09 §5.1).
@@ -395,7 +395,7 @@ static_assert(pi > 3.14159 && pi < 3.14160, "pi must be std::numbers::pi");
 The curated mp-units vocabulary used in every `Input`/`Result`. Calculator signatures read
 `emc::units::Frequency`, not `quantity<isq::frequency[si::hertz], double>`. One `Rep = double` knob for
 the library. Relative permeability/permittivity are **dimensionless doubles** (mu_r/eps_r), and
-**dB/dBm are typed log wrappers**, never linear mp-units units (plan doc 03 §3, §9).
+**dB/dBm are typed log wrappers**, never linear mp-units units.
 
 ```c++
 // include/emc/core/units.hpp
@@ -412,7 +412,7 @@ namespace mpu = mp_units;
 namespace isq = mp_units::isq;
 namespace si  = mp_units::si;
 
-// --- Representation type: one knob for the whole library (doc 03 §9). ----------
+// --- Representation type: one knob for the whole library. ----------
 using Rep = double;
 
 // --- Helper alias so every line below stays short. -----------------------------
@@ -446,7 +446,7 @@ using MagneticField =
 using PowerDensity =
     Q<(isq::power / isq::area)[si::watt / si::square(si::metre)]>;        // W/m^2
 
-// Angle (mp-units models the radian explicitly; doc 03 §3).
+// Angle (mp-units models the radian explicitly).
 using Angle = Q<isq::angular_measure[si::radian]>;                       // rad
 
 // ----------------------------------------------------------------------
@@ -468,7 +468,7 @@ using TimePerLength =
     Q<(isq::time / isq::length)[si::second / si::metre]>;                // s/m (propagation delay)
 
 // ----------------------------------------------------------------------
-//  dB / dBm — LOGARITHMIC. NOT mp-units linear units (doc 03 §9). A decibel is
+//  dB / dBm — LOGARITHMIC. NOT mp-units linear units. A decibel is
 //  10*log10(ratio); dBm is dB relative to 1 mW. Modeled as explicit typed
 //  wrappers so the linear physics (Power in watts, fields in V/m) stays type-safe
 //  under mp-units, and conversions are explicit functions, never implicit math.
@@ -505,11 +505,11 @@ struct Dbm     { double value; };   // dB relative to 1 mW (absolute power level
 - **mp-units `quantity` aliases** — one named vocabulary (`Frequency`, `Length`, `Impedance`, …). EMC
   inputs span Hz..GHz and m..mils, so pinning each quantity's kind and unit in the type gives
   compile-time unit safety: a wrong unit factor or a dimensionally wrong product simply does not
-  compile, because mp-units derives every conversion factor itself (doc 03 §1, §7).
+  compile, because mp-units derives every conversion factor itself.
 - **A single `Rep = double` alias** — makes a future representation change a one-line edit.
 - **Typed `Decibel` / `Dbm` wrappers** — keep logarithmic semantics correct without ever letting a dB
   value masquerade as a linear mp-units unit (which would make `dBm + dBm` silently wrong). Linear
-  power stays `emc::units::Power`; the boundary uses explicit `to_power`/`to_dbm` (doc 03 §9).
+  power stays `emc::units::Power`; the boundary uses explicit `to_power`/`to_dbm`.
 - **`constexpr` where the math allows** (`to_ratio`) — C++23 `constexpr <cmath>` lets dB ratios fold at
   compile time.
 
@@ -519,7 +519,7 @@ struct Dbm     { double value; };   // dB relative to 1 mW (absolute power level
 
 One `enum class Material`, one `MaterialProperties` (mp-units-typed conductivity + resistivity, plain
 doubles for mu_r/eps_r), one `constexpr` table, and `properties()` returning `Result<MaterialProperties>`
-— a single source of truth for the conductor database (plan doc 04 §3).
+— a single source of truth for the conductor database.
 
 ```c++
 // include/emc/core/materials.hpp
@@ -587,7 +587,7 @@ using mp_units::si::unit_symbols::ohm;   // ohm
 } // namespace detail
 
 // ---------------------------------------------------------------------------
-//  THE single source of truth (plan doc 04 §3.4). Conductivity values are
+//  THE single source of truth. Conductivity values are
 //  standard handbook figures (IACS-consistent for the common conductors).
 //  Order MUST mirror the enum (Custom excluded); asserted below.
 //   * Copper:    5.96e7 S/m (IACS-consistent).
@@ -628,8 +628,7 @@ inline constexpr std::array<NameEntry, static_cast<std::size_t>(Material::Count)
 
 // ---------------------------------------------------------------------------
 //  properties() — constexpr lookup by enum. Returns Result<MaterialProperties>:
-//  a typed error for Custom / out-of-range, never a numeric sentinel
-//  (doc 04 §4.2, doc 05 §1.3).
+//  a typed error for Custom / out-of-range, never a numeric sentinel.
 // ---------------------------------------------------------------------------
 [[nodiscard]] constexpr Result<MaterialProperties> properties(Material m) noexcept {
     if (m == Material::Custom)
@@ -723,18 +722,17 @@ static_assert(nickel.relative_permeability == 600.0);
 
 - **`enum class Material`** — blocks implicit int↔enum conversion, so a control index cannot be
   `static_cast` into a material and a status integer cannot be returned as a material-ish value.
-  Namespaced enumerators enforce one canonical spelling (doc 04 §4.2).
+  Namespaced enumerators enforce one canonical spelling.
 - **`constexpr std::array` + `consteval make()`** — a true compile-time table in read-only data,
   trivially thread-safe, with row construction *forced* to compile time so a typo is a hard error, not
-  a silent runtime cost (doc 04 §3.2).
+  a silent runtime cost.
 - **`Result<MaterialProperties>` from `properties()`** — `std::expected` makes "unknown material" a
-  distinct, `[[nodiscard]]` value the caller must handle, never a plausible-looking numeric sentinel
-  (doc 05 §1.3).
+  distinct, `[[nodiscard]]` value the caller must handle, never a plausible-looking numeric sentinel.
 - **mp-units-typed `conductivity`/`resistivity`** — units in the type; `1/sigma` is checked to be a
   resistivity. `mu_r`/`eps_r` are plain doubles per the canonical API (they appear bare in formulas).
 - **`static_assert`/`consteval` invariants** — "table size == enum size", "ρ = 1/σ", "every value
   positive", "lookup hits the right row" are build-time invariants: the database cannot be merged in a
-  broken state (doc 04 §6.2).
+  broken state.
 
 ---
 
@@ -807,7 +805,7 @@ static_assert(emc::ValidatedCalculator<SkinDepth>);   // contract checked at com
 - **Concepts (C++20)** — give "all calculators share a shape" with **zero runtime cost** and readable
   diagnostics, versus the OO alternative (`class Calculator { virtual Result solve() = 0; }`) that
   would force heap allocation, a vtable, and type erasure for math that is pure and known at the call
-  site (doc 06 §1e).
+  site.
 - **`static_assert(Calculator<...>)` in each header** — turns "did the developer follow the
   convention?" into a compile error *at the point of the mistake* if a `Result` type or `calculate`
   signature drifts.
@@ -969,7 +967,7 @@ as `tests/reference/<Name>.csv` (e.g. `SkinDepth.csv`, `MicrostripTrace.csv`). T
 them next to the test binary so `load_csv("reference/<Name>.csv")` resolves:
 
 ```cmake
-# tests/CMakeLists.txt   (full wiring in 08-build-system-cmake.md)
+# tests/CMakeLists.txt   (full wiring in 16-build-and-scaffolding.md)
 find_package(Catch2 3 REQUIRED)
 include(Catch)
 
@@ -1097,7 +1095,7 @@ Every one of the 15 calculator guides follows this recipe, reusing the canonical
 
 ## Cross-references
 
-- [`../08-build-system-cmake.md`](../08-build-system-cmake.md) — install/export, mp-units PUBLIC
+- [`16-build-and-scaffolding.md`](16-build-and-scaffolding.md) — install/export, mp-units PUBLIC
   propagation, Catch2 discovery, and the `tests/reference/` copy step.
 - [`../09-testing-and-golden-vectors.md`](../09-testing-and-golden-vectors.md) — the reference-vector
   harness and tolerance model that `load_csv` + `approx` feed.

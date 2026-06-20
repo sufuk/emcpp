@@ -54,7 +54,7 @@ namespace emc::converter {
 
 /// Inputs for the antenna-factor → gain conversion.
 /// `antenna_factor` is a dB/m log quantity, modeled with the canonical Decibel
-/// wrapper (doc 03 §9) — it is NOT a linear mp-units unit.
+/// wrapper — it is NOT a linear mp-units unit.
 struct AntennaFactorInput {
     emc::units::Frequency frequency{};            ///< f  (e.g. 100.0 * MHz)
     emc::units::Decibel   antenna_factor{};       ///< AF [dB/m]
@@ -135,7 +135,7 @@ emc::Result<AntennaFactorResult> calculate(const AntennaFactorInput& in) {
 - **`emc::constants::c` (mp-units quantity)** — `c / frequency` is dimension-checked: it *cannot* compile
   against a non-frequency, so a wrong-dimension operand is a compile error rather than a silent numeric bug.
 - **`emc::units::Decibel` wrapper** — AF and gain are logarithmic dB values. Modeling them as the canonical
-  typed wrapper (not a linear mp-units unit, doc 03 §9) keeps `10^(AF/20)` explicit and prevents the linear
+  typed wrapper (not a linear mp-units unit) keeps `10^(AF/20)` explicit and prevents the linear
   physics (`λ` in metres) and the log values from mixing silently.
 - **Designated-initializer `AntennaFactorInput`** — call sites read
   `{.frequency = 100.0*MHz, .antenna_factor = Decibel{2.0}}`; the unit lives in the quantity, so there is no
@@ -328,7 +328,7 @@ emc::Result<EFieldPowerDensityResult> calculate(const EFieldPowerDensityInput& i
 ### 4. Modern C++ features used here — and why
 
 - **mp-units derived units** — `E*E/η` *computes* its own `W/m²` dimension instead of returning a bare
-  number that a label has to assert is `W/m²`; a wrong field unit can no longer slip through (doc 03 §1).
+  number that a label has to assert is `W/m²`; a wrong field unit can no longer slip through.
 - **Member default via `default_eta()`** — exposes the `377 Ω` free-space default as a typed quantity, so a
   call site can omit `wave_impedance` and still get free-space behavior, with no magic literal at the boundary.
 - **`emc::require_nonzero`** — turns the unguarded `1/η` into an explicit `DivisionByZero` error: the inputs
@@ -691,7 +691,7 @@ emc::Result<WaveResult> solve_wavelength(const FrequencyToWavelengthInput& in) {
 - **Two named `solve_*` functions sharing `detail::`** — the bidirectional pattern; sharing the core makes
   inverse-consistency structural rather than a property two separate bodies have to maintain by hand.
 - **mp-units `Length`/`Frequency` inputs** — callers pass `500.0 * nm` or `2.4 * GHz` and the library converts
-  via `q.in(...)`; a wrong conversion factor is impossible (doc 03 §7).
+  via `q.in(...)`; a wrong conversion factor is impossible.
 - **`emc::require_positive`** — guards `λ = 0` / `f = 0`, the divide-by-zero domain edges.
 
 ### 5. Example usage

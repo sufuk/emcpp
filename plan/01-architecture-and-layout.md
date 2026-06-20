@@ -33,7 +33,7 @@ Domain      ->  Foundation (+ stdlib + mp-units)
 Facade      ->  Domain + Foundation (include-only)
 ```
 
-Enforcement is mechanical (see docs 08/09): a layering lint (`clang-tidy` `misc-include-cleaner` + a
+Enforcement is mechanical (see implementation/16-build-and-scaffolding.md and 09-testing-and-golden-vectors.md): a layering lint (`clang-tidy` `misc-include-cleaner` + a
 custom check) and a CI check fail the build if any `src/<categoryA>/...` pulls in a sibling category's
 public header, keeping "no sideways domain dependency" honest.
 
@@ -89,23 +89,23 @@ headers do not.
 
 ```text
 /Users/sufuk/CLionProjects/emcpp/
-├── CMakeLists.txt                      # top-level project(); see doc 08
+├── CMakeLists.txt                      # top-level project(); see build guide
 ├── CMakePresets.json                   # configure/build/test presets
 ├── README.md  LICENSE
 ├── .clang-format / .clang-tidy         # style + the layering lint checks
 │
-├── cmake/                              # support files (config template, warnings, deps) — doc 08
+├── cmake/                              # support files (config template, warnings, deps) — (see build guide)
 │
 ├── include/emc/                        # PUBLIC headers — installed, the API surface
 │   ├── emc.hpp                         #   FACADE: includes everything
-│   ├── version.hpp                     #   EMC_VERSION_* (generated; doc 08)
-│   ├── export.hpp                      #   EMC_API macro (generated; def in doc 08)
+│   ├── version.hpp                     #   EMC_VERSION_* (generated; see build guide)
+│   ├── export.hpp                      #   EMC_API macro (generated; def see build guide)
 │   ├── core/                           #   FOUNDATION public headers
-│   │   ├── error.hpp                   #     emc::Error, emc::ErrorCode (doc 05)
-│   │   ├── units.hpp                   #     emc::units vocabulary on mp-units (doc 03)
-│   │   ├── constants.hpp               #     emc::constants constexpr quantities (doc 04)
-│   │   ├── materials.hpp               #     emc::materials database (doc 04)
-│   │   └── calculator.hpp              #     Calculator concept + shared traits (doc 06)
+│   │   ├── error.hpp                   #     emc::Error, emc::ErrorCode
+│   │   ├── units.hpp                   #     emc::units vocabulary on mp-units
+│   │   ├── constants.hpp               #     emc::constants constexpr quantities
+│   │   ├── materials.hpp               #     emc::materials database
+│   │   └── calculator.hpp              #     Calculator concept + shared traits
 │   ├── basic/        (basic.hpp + antenna, decibel, skin_depth)            # category 1
 │   ├── converter/    (+ antenna_factor_gain, efield_power_density, …, vswr) # category 2
 │   ├── component/    (+ capacitance, inductance, resistance, microstrip_trace, …) # category 3
@@ -155,9 +155,9 @@ All public symbols live under `emc`.
 | Namespace          | Layer      | Lives in                               | Contents                                                          |
 |--------------------|------------|----------------------------------------|------------------------------------------------------------------|
 | `emc`              | top        | everywhere                             | `Error`, `ErrorCode`, facade re-exports, version constants        |
-| `emc::units`       | Foundation | `core/units.hpp`                       | quantity/unit vocabulary on mp-units: `length`, `frequency`, `impedance`, `conductivity`, parse helpers (doc 03) |
-| `emc::constants`   | Foundation | `core/constants.hpp`                   | `constexpr` constants as mp-units quantities: `c`, `mu_0`, `eps_0`, `h`, `eta_0` (doc 04) |
-| `emc::materials`   | Foundation | `core/materials.hpp`                   | `constexpr` material DB: conductivity, `mu_r`, resistivity (doc 04) |
+| `emc::units`       | Foundation | `core/units.hpp`                       | quantity/unit vocabulary on mp-units: `length`, `frequency`, `impedance`, `conductivity`, parse helpers (see implementation/00-foundation-code.md) |
+| `emc::constants`   | Foundation | `core/constants.hpp`                   | `constexpr` constants as mp-units quantities: `c`, `mu_0`, `eps_0`, `h`, `eta_0` (see implementation/00-foundation-code.md) |
+| `emc::materials`   | Foundation | `core/materials.hpp`                   | `constexpr` material DB: conductivity, `mu_r`, resistivity (see implementation/00-foundation-code.md) |
 | `emc::detail`      | internal   | `src/.../detail/*.hpp` (not installed) | private kernels/helpers; **not** part of the API contract         |
 | `emc::basic` … `emc::testing` | Domain | `include/emc/<dir>/`             | the 9 category calculators                                        |
 
@@ -212,7 +212,7 @@ expands to the platform's symbol-visibility / DLL import-export keyword.
 
 > [!NOTE]
 > The **authoritative** macro definition (CMake's `generate_export_header` + `-fvisibility=hidden`) belongs
-> to **doc 08**. Here we fix only the *convention*: out-of-line `calculate()`/`validate()` get `EMC_API`;
+> to implementation/16-build-and-scaffolding.md. Here we fix only the *convention*: out-of-line `calculate()`/`validate()` get `EMC_API`;
 > `inline`/`template`/`constexpr` entities fully defined in headers do **not** (no out-of-line symbol). The
 > aggregate `Input`/`Result` structs are header-only data and need no `EMC_API`.
 
@@ -235,7 +235,7 @@ concept Calculator = requires (const Input& in) {
 The concept lets generic test harnesses and batch drivers (doc 09) operate over *any* calculator
 uniformly and gives a compile-time contract, so a malformed calculator fails to compile rather than
 silently diverging. The **deep treatment** (designated initializers, member defaults, `validate`
-composition, ADL nuances) is owned by **doc 06**; here we fix only the invariant: *every calculator is
+composition, ADL nuances) is owned by implementation/00-foundation-code.md (the calculator pattern); here we fix only the invariant: *every calculator is
 `(Input, Result, calculate) [+ validate]` returning `std::expected<…, emc::Error>`, nothing else.*
 
 ---
@@ -246,10 +246,10 @@ These hold uniformly across the library and are architectural, not per-calculato
 
 - **Error type placement** — one error type for the whole library: `emc::Error`/`emc::ErrorCode` in
   Foundation (`core/error.hpp`), no per-category enums. Failures travel through the value channel as
-  `std::expected<…, emc::Error>`, keeping them explicit and recoverable. Mechanics: doc 05.
+  `std::expected<…, emc::Error>`, keeping them explicit and recoverable. Mechanics: implementation/00-foundation-code.md.
 - **Units vocabulary placement** — `emc::units` (Foundation) is the *only* vocabulary domain code uses for
   dimensional quantities. No calculator stores a quantity as a bare double + remembered factor; conversion
-  is compile-checked and done once, at the application boundary. Details: doc 03.
+  is compile-checked and done once, at the application boundary. Details: implementation/00-foundation-code.md.
 - **Thread-safety** — every `calculate()`/`validate()` is a **pure function**: reads only `const Input&`,
   writes only its result, touches no global mutable state. All calculators are therefore reentrant and
   thread-safe by construction; constants/materials are `constexpr`/immutable. No singletons, no lazy
@@ -269,7 +269,7 @@ These hold uniformly across the library and are architectural, not per-calculato
 A traditional compiled library has an ABI surface downstream binaries link against.
 
 - **Semver** (`MAJOR.MINOR.PATCH`) via `include/emc/version.hpp` (`EMC_VERSION_*`, generated by CMake —
-  doc 08) and the CMake package version file, so `find_package(emc 1.2)` enforces compatibility.
+  implementation/16-build-and-scaffolding.md) and the CMake package version file, so `find_package(emc 1.2)` enforces compatibility.
   - **MAJOR** — breaking API/ABI (changed `calculate` signature, removed/renamed symbol, incompatible
     `Input`/`Result` layout change).
   - **MINOR** — additive (new calculator, appended optional struct member with a default, new overload).
@@ -287,10 +287,10 @@ A traditional compiled library has an ABI surface downstream binaries link again
 
 > [!NOTE]
 > Forward-looking (C++26 / modules): a future iteration could ship `emc` as C++ modules to cut template
-> recompilation cost. The plan targets **headers + `.cpp`** for now (locked decision); doc 08 expands.
+> recompilation cost. The plan targets **headers + `.cpp`** for now (locked decision); implementation/16-build-and-scaffolding.md expands.
 
 ---
 
 ## Cross-references
 
-See `plan/README.md` for the full plan index (docs 00, 03–09).
+See `plan/README.md` for the full plan index; the foundation (units / constants / materials / error model / calculator pattern) lives in implementation/00-foundation-code.md and the build & scaffolding in implementation/16-build-and-scaffolding.md.

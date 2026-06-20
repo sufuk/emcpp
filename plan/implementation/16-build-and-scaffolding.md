@@ -910,5 +910,4 @@ arrive.
 - [`../09-testing-and-golden-vectors.md`](../09-testing-and-golden-vectors.md) — the reference-vector
   harness and the ASan/UBSan CTest preset.
 - [`../README.md`](../README.md) — the full plan index.
-```
 

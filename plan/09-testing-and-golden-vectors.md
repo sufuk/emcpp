@@ -11,8 +11,9 @@ every formula correct against established EMC references. Four pillars:
 All four run under Catch2 v3 with explicit tolerances and a CI matrix.
 
 > [!NOTE]
-> The calculator contract (`Input`/`Result`, `calculate`/`validate`, `Calculator` concept) is defined in
-> **06**; the error type in **05**; units in **03**. This document consumes all three.
+> The calculator contract (`Input`/`Result`, `calculate`/`validate`, `Calculator` concept), the error
+> type, and units are all defined in [implementation/00-foundation-code.md](implementation/00-foundation-code.md).
+> This document consumes all three.
 
 ---
 
@@ -31,7 +32,8 @@ frequency[MHz],material,expected_skin_depth[cm]
 
 Encoding each column's unit in the header removes tribal knowledge: the test reads `frequency[MHz]` and
 constructs `27.0 * MHz` directly. A `material` column resolves through `emc::materials::by_name(...)`
-(the single source of truth for `conductivity` and `relative_permeability`, from **04**) into the
+(the single source of truth for `conductivity` and `relative_permeability`, from
+[implementation/00-foundation-code.md](implementation/00-foundation-code.md)) into the
 `Input` struct; mp-units then lets the test assert in *exactly* the unit the reference uses (Section 4).
 
 > [!IMPORTANT]
@@ -53,7 +55,8 @@ Pure standard C++: parse CSV with `std::views::split` over `std::string_view`, c
 - **Skip rule.** `read_fixture()` skips blank lines, `#` comments, and the unit-header row (any line
   containing `[`).
 
-The `Calculator` concept (from **06**) lets one template engine drive *every* calculator. Per calculator
+The `Calculator` concept (from [implementation/00-foundation-code.md](implementation/00-foundation-code.md))
+lets one template engine drive *every* calculator. Per calculator
 you supply only two lambdas — `make_input(row)` and `check(row, result)`:
 
 ```c++
@@ -109,7 +112,8 @@ TEST_CASE("skin depth matches reference values", "[basic][skin_depth][known]") {
 
 ### 3.2 Edge / validation tests
 
-Known-value rows test the happy path; the `validate()` half of the contract (from **05**) gets its own
+Known-value rows test the happy path; the `validate()` half of the contract (from
+[implementation/00-foundation-code.md](implementation/00-foundation-code.md)) gets its own
 table of values that must be **rejected** with a specific `ErrorCode`:
 
 ```c++
@@ -177,14 +181,15 @@ the tolerance.
 
 C++23 makes `<cmath>` `constexpr` (`sqrt`, `exp`, `log`, `pow`), so the simpler closed-form calculators
 evaluate **at compile time**. A wrong constant then fails the *build*, not a test run — the strongest
-regression guard. Constants are defined exactly once (**04**); asserting them at compile time breaks the
+regression guard. Constants are defined exactly once (see
+[implementation/00-foundation-code.md](implementation/00-foundation-code.md)); asserting them at compile time breaks the
 build everywhere at once on any regression.
 
 ```c++
 static_assert(emc::constants::c.numerical_value_in(m/s) == 299'792'458.0,
               "speed of light is the exact SI defining constant");
 
-// Skin depth of copper at 1 MHz ~ 66.1 um (analytic). calculate() is constexpr (see 06).
+// Skin depth of copper at 1 MHz ~ 66.1 um (analytic). calculate() is constexpr (see 00-foundation-code.md).
 constexpr auto copper = emc::basic::calculate({
     .frequency = 1.0 * si::mega<si::hertz>,
     .conductivity = 5.8005e7 * (si::siemens / si::metre),
@@ -232,7 +237,8 @@ real shield, ordered resonant-mode frequencies (`f110 ≤ f111 ≤ …`).
 
 ### 7.1 CTest wiring
 
-Tests live in `tests/` and register with CTest via Catch2 discovery (full setup in **08**):
+Tests live in `tests/` and register with CTest via Catch2 discovery (full setup in
+[implementation/16-build-and-scaffolding.md](implementation/16-build-and-scaffolding.md)):
 
 ```cmake
 find_package(Catch2 3 REQUIRED)
@@ -261,7 +267,8 @@ strategy:
 > [!WARNING]
 > C++23 `constexpr <cmath>`, `std::expected`, and `std::print` support differ across GCC and Clang. The
 > Section 5 compile-time tests are the canary — if a toolchain can't `constexpr`-evaluate `calculate()`,
-> that job fails fast. Pin minimums that ship the needed library features (and mp-units's; see **03**).
+> that job fails fast. Pin minimums that ship the needed library features (and mp-units's; see
+[implementation/00-foundation-code.md](implementation/00-foundation-code.md)).
 
 ### 7.4 Coverage
 
@@ -319,6 +326,8 @@ The "done" definition referenced by **10-roadmap.md**:
 
 ## Cross-references
 
-**03** unit-fixed comparison · **04** constants/material DB · **05** `Error`/`ErrorCode` · **06**
-Input/Result/`calculate`/`Calculator` contract · **07** calculator→vector work-list · **08** CMake/CTest
+[implementation/00-foundation-code.md](implementation/00-foundation-code.md) — units / unit-fixed
+comparison, constants/material DB, `Error`/`ErrorCode`, Input/Result/`calculate`/`Calculator` contract ·
+[07-calculator-inventory.md](07-calculator-inventory.md) calculator→vector work-list ·
+[implementation/16-build-and-scaffolding.md](implementation/16-build-and-scaffolding.md) CMake/CTest
 wiring · **10** roadmap exit criteria.

@@ -44,7 +44,7 @@ Fixed for the whole plan. If a doc ever seems to disagree, this box wins.
 | 01 | [`01-architecture-and-layout.md`](01-architecture-and-layout.md) | Layered architecture, directory/namespace layout, dependency rules, public/internal boundary, calculator contract, ABI/versioning. |
 | — | [`implementation/`](implementation/) | **Per-calculator implementation guides** (header + `.cpp` + tests for all 51 calculators), built on [`implementation/00-foundation-code.md`](implementation/00-foundation-code.md) — the units, constants, materials, error model, and the calculator pattern, *as actual code*. |
 | 07 | [`07-calculator-inventory.md`](07-calculator-inventory.md) | **Calculator catalog & library map** — all calculators (inputs, units, formulas, solve directions, validation, materials, complexity) and their target locations. |
-| 08 | [`08-build-system-cmake.md`](08-build-system-cmake.md) | The modern-CMake build: mp-units acquisition, symbol visibility, `install()`/`export()` + package config, presets, tooling. |
+| — | [`implementation/16-build-and-scaffolding.md`](implementation/16-build-and-scaffolding.md) | **Build & scaffolding** — the modern-CMake build: mp-units acquisition, symbol visibility, `install()`/`export()` + package config, presets, tooling. |
 | 09 | [`09-testing-and-golden-vectors.md`](09-testing-and-golden-vectors.md) | **Testing strategy** — fast, deterministic, GUI-free regression suite layered with compile-time, property, and CI checks. |
 
 ### Suggested reading order
@@ -54,7 +54,7 @@ Fixed for the whole plan. If a doc ever seems to disagree, this box wins.
 - **Implementer** — *what do I build, in what order?*
   **00** → **01** → [`implementation/00-foundation-code.md`](implementation/00-foundation-code.md) (units,
   constants, materials, errors, the calculator pattern — *as code*) → **07** (pick a calculator) → its
-  [`implementation/`](implementation/) guide → **08** (build) → **09** (prove). Loop the last three per calculator.
+  [`implementation/`](implementation/) guide → [`implementation/16-build-and-scaffolding.md`](implementation/16-build-and-scaffolding.md) (build) → **09** (prove). Loop the last three per calculator.
 
 ---
 

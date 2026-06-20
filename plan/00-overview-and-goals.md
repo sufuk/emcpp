@@ -9,14 +9,14 @@
 
 ## 1. Purpose
 
-**emc** (at `/Users/sufuk/CLionProjects/emcpp`) implements the standard EMC engineering calculations — skin depth, antenna factor, decibel conversions, microstrip impedance, cavity resonance, shielding effectiveness, braid coverage, crosstalk, ~52 calculators across 9 categories. The math is well-understood textbook physics; the value is *packaging it correctly*: exact constants, unit-safe quantities, a single material database, and explicit recoverable errors — reusable and testable without any presentation layer.
+**emc** (at `/Users/sufuk/CLionProjects/emcpp`) implements the standard EMC engineering calculations — skin depth, antenna factor, decibel conversions, microstrip impedance, cavity resonance, shielding effectiveness, braid coverage, crosstalk, 51 calculators across 9 categories. The math is well-understood textbook physics; the value is *packaging it correctly*: exact constants, unit-safe quantities, a single material database, and explicit recoverable errors — reusable and testable without any presentation layer.
 
 It is a **traditional compiled C++23 library**: public headers in `include/emc/`, translation units in `src/`, built static/shared via CMake with proper `install()`/`export()` so downstream projects can `find_package(emc)` and link `emc::emc`. It depends on **mp-units** (the ISO/IEC 80000 standardization-track quantities library) and on **no GUI toolkit of any kind**.
 
 > [!IMPORTANT]
 > The library is **presentation-free by design**. The same EMC formula is needed from many front ends — CLI, test, web service, notebook. Tying a formula to a UI would make it callable from exactly one place. `emc` keeps the physics pure so it can be called from all of them.
 
-The detailed *how* lives in documents 01–09 (see §5).
+The detailed *how* lives in the remaining top-level documents and the `implementation/` guides (see §5).
 
 ---
 
@@ -113,7 +113,7 @@ Read **00** (this file) first for the vision, then **01** for the structural fou
 | [01-architecture-and-layout.md](01-architecture-and-layout.md) | Layers, directory/namespace layout, dependency rules, compiled-lib shape. |
 | [implementation/](implementation/) | **Per-calculator implementation guides** + [00-foundation-code.md](implementation/00-foundation-code.md): the units, constants, materials, error model, and calculator pattern *as code*. |
 | [07-calculator-inventory.md](07-calculator-inventory.md) | **Calculator Catalog** — all 51 calculators and their mapping. |
-| [08-build-system-cmake.md](08-build-system-cmake.md) | Modern CMake compiled lib, mp-units dependency, install/export, presets. |
+| [implementation/16-build-and-scaffolding.md](implementation/16-build-and-scaffolding.md) | Build & scaffolding — folder tree, CMake, install/export, presets, CI, bootstrap. |
 | [09-testing-and-golden-vectors.md](09-testing-and-golden-vectors.md) | **Testing Strategy** — known-value, property, round-trip, `constexpr`, edge-case tests. |
 
 ---
