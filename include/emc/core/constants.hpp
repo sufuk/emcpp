@@ -2,8 +2,11 @@
 #pragma once
 
 #include <numbers>     // std::numbers::pi gives one full-precision pi for the whole program
-#include <cmath>       // std::sqrt is constexpr in C++23, so we can use it in the static_asserts below
+#include <cmath>       // std::sqrt etc. for runtime math in headers that include this one
 
+#include <mp-units/math.h>          // mp_units::sqrt — constexpr AND portable. std::sqrt is only
+                                    // constexpr as a libstdc++/GCC extension (not under libc++),
+                                    // so the compile-time identity checks below use mp_units::sqrt.
 #include <mp-units/systems/si.h>
 #include <mp-units/systems/isq.h>
 
@@ -78,15 +81,16 @@ using namespace mp_units;
 // a silently wrong constant.
 
 // 1) c == 1 / sqrt(eps0 * mu0)
+// mp_units::sqrt keeps the units through the root: sqrt(eps0*mu0) is s/m, so its
+// reciprocal is m/s. (constexpr & portable — see the <mp-units/math.h> note above.)
 inline constexpr double c_check =
-    1.0 / std::sqrt((eps0 * mu0).numerical_value_in(si::farad * si::henry
-                                                    / (si::metre * si::metre)));
+    (1.0 / mp_units::sqrt(eps0 * mu0)).numerical_value_in(si::metre / si::second);
 static_assert(close(c_check, c.numerical_value_in(si::metre / si::second)),
               "c must equal 1/sqrt(eps0*mu0)");
 
-// 2) z0 == sqrt(mu0 / eps0)
+// 2) z0 == sqrt(mu0 / eps0)   (mu0/eps0 is ohm^2, so its root is ohm)
 inline constexpr double z0_check =
-    std::sqrt((mu0 / eps0).numerical_value_in(si::ohm * si::ohm));
+    mp_units::sqrt(mu0 / eps0).numerical_value_in(si::ohm);
 static_assert(close(z0_check, z0.numerical_value_in(si::ohm)),
               "z0 must equal sqrt(mu0/eps0)");
 
