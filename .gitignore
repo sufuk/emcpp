@@ -25,3 +25,4 @@ CMakeUserPresets.json
 
 # isolated GCC verify build dir
 /gcc-verify/
+/cmake-build-*/

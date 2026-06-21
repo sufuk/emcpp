@@ -7,7 +7,7 @@
 // They share one header/TU because they are the same family — characteristic
 // parameters of a uniform line — and the four PCB/wire variants share one
 // skin-depth -> L/C/Z0/R-per-length algorithm factored into detail::per_length_line.
-// All are GUI-free, mp-units-typed, std::expected-returning free functions.
+// All are mp-units-typed, std::expected-returning free functions.
 #pragma once
 
 #include <expected>
