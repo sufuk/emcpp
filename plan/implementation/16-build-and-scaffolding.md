@@ -819,7 +819,7 @@ mkdir -p cmake \
          .github/workflows
 
 # 2. Drop in the build & dotfiles from this guide:
-#    CMakeLists.txt (§3), CMakePresets.json (§10),
+#    CMakeLists.txt (§3), sad.jsosdn (§10),
 #    cmake/Dependencies.cmake (§4), cmake/CompilerWarnings.cmake (§6),
 #    cmake/Install.cmake (§9), cmake/emcConfig.cmake.in (§9),
 #    tests/CMakeLists.txt (§7), examples/CMakeLists.txt (§8),
