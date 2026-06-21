@@ -35,8 +35,12 @@ target_sources(emc PRIVATE                     # explicit list, NOT glob
         src/core/error.cpp
         src/core/materials.cpp
         src/component/capacitance.cpp
+        src/basic/skin_depth.cpp
+        src/basic/decibel.cpp
+        src/basic/dipole_antenna.cpp
+        src/basic/loop_antenna.cpp
+        src/basic/far_field_criteria.cpp
         include/emc/core/error.hpp
-        #    src/basic/skin_depth.cpp
         #    src/converter/vswr.cpp
         #    src/component/microstrip_trace.cpp
         #    src/prediction/rf_field.cpp
