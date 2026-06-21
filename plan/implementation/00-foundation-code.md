@@ -424,11 +424,11 @@ using Q = mpu::quantity<Reference, Rep>;
 // ----------------------------------------------------------------------
 using Frequency   = Q<isq::frequency[si::hertz]>;                         // Hz
 using Length      = Q<isq::length[si::metre]>;                           // m
-using Area        = Q<isq::area[si::square(si::metre)]>;                 // m^2
+using Area        = Q<isq::area[si::metre * si::metre]>;                 // m^2
 using Time        = Q<isq::time[si::second]>;                            // s
 
 using Voltage     = Q<isq::voltage[si::volt]>;                          // V
-using Current     = Q<isq::current[si::ampere]>;                       // A
+using Current     = Q<isq::electric_current[si::ampere]>;              // A
 using Power       = Q<isq::power[si::watt]>;                           // W
 using Impedance   = Q<isq::resistance[si::ohm]>;                        // ohm  (Z0, R, RL, ...)
 using Capacitance = Q<isq::capacitance[si::farad]>;                    // F
@@ -436,7 +436,7 @@ using Inductance  = Q<isq::inductance[si::henry]>;                     // H
 
 // Material / field quantities
 using Conductivity =
-    Q<isq::electrical_conductivity[si::siemens / si::metre]>;            // S/m
+    Q<isq::conductivity[si::siemens / si::metre]>;                       // S/m
 using Resistivity =
     Q<isq::resistivity[si::ohm * si::metre]>;                            // ohm*m
 using ElectricField =
@@ -444,7 +444,7 @@ using ElectricField =
 using MagneticField =
     Q<isq::magnetic_field_strength[si::ampere / si::metre]>;             // A/m
 using PowerDensity =
-    Q<(isq::power / isq::area)[si::watt / si::square(si::metre)]>;        // W/m^2
+    Q<(isq::power / isq::area)[si::watt / (si::metre * si::metre)]>;      // W/m^2
 
 // Angle (mp-units models the radian explicitly).
 using Angle = Q<isq::angular_measure[si::radian]>;                       // rad
