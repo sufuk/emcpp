@@ -32,9 +32,10 @@ add_library(emc::emc ALIAS emc)                # consumers always say emc::emc
 target_compile_features(emc PUBLIC cxx_std_23) # PUBLIC: propagates to consumers
 
 target_sources(emc PRIVATE                     # explicit list, NOT glob
-        #    src/core/error.cpp
-        include/emc/core/error.hpp
+        src/core/error.cpp
         src/core/materials.cpp
+        src/component/capacitance.cpp
+        include/emc/core/error.hpp
         #    src/basic/skin_depth.cpp
         #    src/converter/vswr.cpp
         #    src/component/microstrip_trace.cpp
