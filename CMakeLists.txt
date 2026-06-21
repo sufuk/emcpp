@@ -32,24 +32,42 @@ add_library(emc::emc ALIAS emc)                # consumers always say emc::emc
 target_compile_features(emc PUBLIC cxx_std_23) # PUBLIC: propagates to consumers
 
 target_sources(emc PRIVATE                     # explicit list, NOT glob
+        # core
         src/core/error.cpp
         src/core/materials.cpp
-        src/component/capacitance.cpp
+        # basic
         src/basic/skin_depth.cpp
         src/basic/decibel.cpp
         src/basic/dipole_antenna.cpp
         src/basic/loop_antenna.cpp
         src/basic/far_field_criteria.cpp
+        # converter
+        src/converter/antenna_factor.cpp
+        src/converter/efield_power_density.cpp
+        src/converter/energy_frequency.cpp
+        src/converter/wavelength_frequency.cpp
+        src/converter/vswr.cpp
+        # component
+        src/component/capacitance.cpp
+        src/component/harmonic_trap.cpp
+        # prediction
+        src/prediction/esd_coupling.cpp
+        src/prediction/lightning_coupling.cpp
+        src/prediction/rf_field.cpp
+        src/prediction/friis.cpp
+        # cabling
+        src/cabling/braid_coverage.cpp
+        src/cabling/crosstalk.cpp
+        # grounding
+        src/grounding/microstrip_current.cpp
+        # testing
+        src/testing/noise_figure.cpp
+        # filtering
+        src/filtering/ferrite_toroid.cpp
+        # public headers listed for IDE visibility (headers are not compiled):
         include/emc/core/error.hpp
-        #    src/converter/vswr.cpp
-        #    src/component/microstrip_trace.cpp
-        #    src/prediction/rf_field.cpp
-        #    src/shielding/shielding_effectiveness.cpp
-        #    src/filtering/ferrite.cpp
-        #    src/cabling/crosstalk.cpp
-        #    src/grounding/microstrip_current.cpp
-        #    src/testing/noise_figure.cpp
-        # ... one .cpp per calculator, added as inventory items land (07-calculator-inventory)
+        # remaining to implement: component (inductance, resistance, board-impedance,
+        # transmission-line) and shielding (cavity, effectiveness).
 )
 
 target_include_directories(emc PUBLIC
