@@ -6,8 +6,10 @@
 # Notes that drive the choices below:
 #   * There is NO CMakePresets.json, so every CMake call is a raw
 #     `cmake -S . -B build -G Ninja ...` (never `cmake --preset`).
-#   * ubuntu-24.04 ships g++-14 and clang-18, both new enough for the C++23
-#     std::expected and mp-units 2.5 the code uses. Generator: Ninja.
+#   * ubuntu-24.04 ships g++-14 and clang-18 for the C++23 std::expected and
+#     mp-units 2.5 the code uses. clang-18 builds against libc++ (-stdlib=libc++)
+#     because its default libstdc++ pairing does not expose std::expected.
+#     Generator: Ninja.
 #   * The library is built/tested STATIC (its default). A shared build is not
 #     supported yet (some public symbols lack the EMC_API export macro).
 #   * The dependency clones (mp-units v2.5.0 + Catch2 v3.7.1) are slow and have
@@ -65,9 +67,16 @@ jobs:
               echo "CXX=g++-14" >> "$GITHUB_ENV"
               ;;
             clang-18)
-              sudo apt-get install -y --no-install-recommends clang-18
-              echo "CC=clang-18"    >> "$GITHUB_ENV"
-              echo "CXX=clang++-18" >> "$GITHUB_ENV"
+              # Use libc++ (not the system libstdc++): clang-18 paired with
+              # ubuntu-24.04's libstdc++ does not expose std::expected, but
+              # libc++-18 supports it cleanly. -stdlib=libc++ is C++-only, so it
+              # goes in CXXFLAGS/LDFLAGS (CMake folds these into the flags on the
+              # first configure) and leaves C compiles untouched.
+              sudo apt-get install -y --no-install-recommends clang-18 libc++-18-dev libc++abi-18-dev
+              echo "CC=clang-18"           >> "$GITHUB_ENV"
+              echo "CXX=clang++-18"        >> "$GITHUB_ENV"
+              echo "CXXFLAGS=-stdlib=libc++" >> "$GITHUB_ENV"
+              echo "LDFLAGS=-stdlib=libc++"  >> "$GITHUB_ENV"
               ;;
           esac
 
@@ -156,7 +165,7 @@ jobs:
         run: |
           set -euxo pipefail
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends ninja-build ccache clang-18
+          sudo apt-get install -y --no-install-recommends ninja-build ccache clang-18 libc++-18-dev libc++abi-18-dev
           "${CXX}" --version
 
       - name: Cache FetchContent deps (sanitized)
@@ -178,6 +187,8 @@ jobs:
       - name: Configure (sanitized)
         run: |
           set -euo pipefail
+          # std::expected needs libc++ under clang-18 (see build-test job). Keep
+          # -stdlib=libc++ out of the C flags; sanitizer flags apply to both.
           SAN_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all"
           configure() {
             cmake -S . -B build -G Ninja \
@@ -188,9 +199,9 @@ jobs:
               -DCMAKE_C_COMPILER_LAUNCHER=ccache \
               -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
               -DCMAKE_C_FLAGS="${SAN_FLAGS}" \
-              -DCMAKE_CXX_FLAGS="${SAN_FLAGS}" \
-              -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined" \
-              -DCMAKE_SHARED_LINKER_FLAGS="-fsanitize=address,undefined"
+              -DCMAKE_CXX_FLAGS="-stdlib=libc++ ${SAN_FLAGS}" \
+              -DCMAKE_EXE_LINKER_FLAGS="-stdlib=libc++ -fsanitize=address,undefined" \
+              -DCMAKE_SHARED_LINKER_FLAGS="-stdlib=libc++ -fsanitize=address,undefined"
           }
           for attempt in 1 2 3; do
             echo "::group::configure attempt ${attempt}"
