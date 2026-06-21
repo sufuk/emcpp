@@ -14,6 +14,12 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)          # for clang-tidy / clangd
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)        # only EMC_API symbols exported
 set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 
+# We use plain headers, not C++20 modules. With the Ninja generator CMake
+# otherwise turns on module scanning, which adds -fmodules-ts; under that flag
+# GCC on macOS skips its own patched system headers and pulls the SDK's broken
+# <string.h> (the rsize_t / memset_s error). Off = builds the same everywhere.
+set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
+
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "" FORCE)
 endif ()
