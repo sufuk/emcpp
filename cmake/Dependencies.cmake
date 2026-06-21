@@ -6,6 +6,7 @@ if(NOT mp-units_FOUND)
     # These options are read by mp-units' own CMakeLists, so set them BEFORE MakeAvailable:
     set(MP_UNITS_API_CONTRACTS NONE CACHE STRING "" FORCE)   # no gsl-lite / ms-gsl transitive dep
     set(MP_UNITS_BUILD_CXX_MODULES OFF CACHE BOOL "" FORCE)  # headers, not C++20 modules
+    set(MP_UNITS_API_STD_FORMAT ON CACHE STRING "" FORCE)    # use std::format (C++23); avoids the fmt dependency
     FetchContent_Declare(mp-units
         GIT_REPOSITORY https://github.com/mpusz/mp-units.git
         GIT_TAG        v2.5.0          # pinned for reproducibility
