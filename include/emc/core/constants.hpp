@@ -4,9 +4,6 @@
 #include <numbers>     // std::numbers::pi gives one full-precision pi for the whole program
 #include <cmath>       // std::sqrt etc. for runtime math in headers that include this one
 
-#include <mp-units/math.h>          // mp_units::sqrt — constexpr AND portable. std::sqrt is only
-                                    // constexpr as a libstdc++/GCC extension (not under libc++),
-                                    // so the compile-time identity checks below use mp_units::sqrt.
 #include <mp-units/systems/si.h>
 #include <mp-units/systems/isq.h>
 
@@ -80,18 +77,22 @@ using namespace mp_units;
 // Edit one literal above into an inconsistent set and the build fails instead of shipping
 // a silently wrong constant.
 
-// 1) c == 1 / sqrt(eps0 * mu0)
-// mp_units::sqrt keeps the units through the root: sqrt(eps0*mu0) is s/m, so its
-// reciprocal is m/s. (constexpr & portable — see the <mp-units/math.h> note above.)
-inline constexpr double c_check =
-    (1.0 / mp_units::sqrt(eps0 * mu0)).numerical_value_in(si::metre / si::second);
-static_assert(close(c_check, c.numerical_value_in(si::metre / si::second)),
+// Both identities involve a square root. A *compile-time* sqrt needs a constexpr
+// sqrt, which neither std::sqrt nor mp_units::sqrt provides under libc++ (both
+// bottom out in the C sqrt, which is constexpr only as a libstdc++/GCC extension).
+// So square each identity — multiplication and division are constexpr everywhere —
+// and assert the equivalent product form.
+
+// 1) c == 1 / sqrt(eps0 * mu0)   <=>   eps0 * mu0 == 1 / c^2   (unit: s^2/m^2)
+static_assert(close((eps0 * mu0).numerical_value_in(si::second * si::second
+                                                    / (si::metre * si::metre)),
+                    (1.0 / (c * c)).numerical_value_in(si::second * si::second
+                                                       / (si::metre * si::metre))),
               "c must equal 1/sqrt(eps0*mu0)");
 
-// 2) z0 == sqrt(mu0 / eps0)   (mu0/eps0 is ohm^2, so its root is ohm)
-inline constexpr double z0_check =
-    mp_units::sqrt(mu0 / eps0).numerical_value_in(si::ohm);
-static_assert(close(z0_check, z0.numerical_value_in(si::ohm)),
+// 2) z0 == sqrt(mu0 / eps0)   <=>   z0^2 == mu0 / eps0   (unit: ohm^2)
+static_assert(close((z0 * z0).numerical_value_in(si::ohm * si::ohm),
+                    (mu0 / eps0).numerical_value_in(si::ohm * si::ohm)),
               "z0 must equal sqrt(mu0/eps0)");
 
 // 3) z0 == mu0 * c   (the same impedance, expressed a different way)
