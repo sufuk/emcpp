@@ -1,0 +1,276 @@
+# .github/workflows/release.yml
+#
+# Tag-driven release pipeline for emc.
+#
+# Trigger: pushing a SemVer tag, e.g.
+#   v1.2.3       -> normal release
+#   v1.2.3-rc1   -> PRERELEASE (also -alpha / -beta)
+# (workflow_dispatch is allowed for manual re-runs against an existing tag.)
+#
+# Rigor, in strict order -- a broken or mistagged release NEVER ships:
+#   1. test    : full build + ctest on the tagged commit with gcc-14 AND
+#                clang-18 (Release, static -- the configuration that ships).
+#                fail-fast: one red cell aborts the whole release.
+#   2. package : verify the tag matches project() VERSION, install emc into a
+#                staging prefix (which bundles mp-units -- see below), run a
+#                find_package(emc) smoke test against it, then build
+#                .tar.gz + .zip + .sha256 artifacts. No CPack, no CMakeLists change.
+#   3. publish : create the GitHub Release with auto-generated notes and attach
+#                the artifacts. This is the ONLY job with contents: write.
+#
+# Raw cmake throughout (no CMakePresets.json). Ninja generator. The flaky
+# dependency clones are cached (source-only) and the configure step is retried.
+# Release builds are intentionally cache-free for compilation (clean from-scratch
+# build per tag); the absence of ccache here is deliberate, not an omission.
+name: release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to (re)build a release for, e.g. v1.2.3"
+        required: true
+        type: string
+
+# A release in flight must NEVER be cancelled by a newer push.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  CMAKE_GENERATOR: Ninja
+  FETCHCONTENT_BASE_DIR: ${{ github.workspace }}/.deps
+  # The tag we are releasing: the dispatch input, or the pushed tag's name.
+  RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+
+jobs:
+  # ===========================================================================
+  # 1. Re-run the full suite on the tagged commit. Gate everything else on this.
+  # ===========================================================================
+  test:
+    name: Gate / ${{ matrix.name }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - name: gcc-14 (Release)
+            cc: gcc-14
+            cxx: g++-14
+            # apt package list -- gcc-14 and g++-14 are both real packages.
+            pkgs: gcc-14 g++-14
+          - name: clang-18 (Release)
+            cc: clang-18
+            cxx: clang++-18
+            # 'clang++-18' is NOT an apt package; the driver ships in 'clang-18'.
+            pkgs: clang-18
+    env:
+      CC: ${{ matrix.cc }}
+      CXX: ${{ matrix.cxx }}
+    steps:
+      - name: Checkout the tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+
+      - name: Install toolchain
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build ${{ matrix.pkgs }}
+          "${CXX}" --version
+
+      - name: Cache FetchContent deps
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.FETCHCONTENT_BASE_DIR }}/*-src
+          key: deps-${{ runner.os }}-${{ matrix.cxx }}-${{ hashFiles('cmake/Dependencies.cmake') }}
+          restore-keys: |
+            deps-${{ runner.os }}-${{ matrix.cxx }}-
+
+      - name: Configure (retry flaky dep clones)
+        run: |
+          set -euo pipefail
+          configure() {
+            cmake -S . -B build -G Ninja \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DEMC_BUILD_TESTS=ON \
+              -DEMC_BUILD_EXAMPLES=ON \
+              -DEMC_WARNINGS_AS_ERRORS=ON
+          }
+          for attempt in 1 2 3; do
+            if configure; then break; fi
+            echo "configure attempt ${attempt} failed; retrying..."; rm -rf build; sleep $((attempt * 10))
+            [ "${attempt}" -eq 3 ] && { echo "::error::configure failed"; exit 1; }
+          done
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Test
+        working-directory: build
+        run: ctest --output-on-failure --no-tests=error -j "$(nproc)"
+
+  # ===========================================================================
+  # 2. Stage an install, validate it consumes cleanly, then make the archives.
+  # ===========================================================================
+  package:
+    name: Package + install-smoke
+    needs: test
+    runs-on: ubuntu-24.04
+    env:
+      CC: gcc-14
+      CXX: g++-14
+      STAGE: ${{ github.workspace }}/stage
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+      prerelease: ${{ steps.ver.outputs.prerelease }}
+    steps:
+      - name: Checkout the tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+
+      - name: Install toolchain
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build zip gcc-14 g++-14
+
+      - name: Cache FetchContent deps
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.FETCHCONTENT_BASE_DIR }}/*-src
+          key: deps-${{ runner.os }}-package-${{ hashFiles('cmake/Dependencies.cmake') }}
+          restore-keys: |
+            deps-${{ runner.os }}-package-
+
+      # Derive the version from the tag and verify it matches project() VERSION.
+      # Portable BRE so it works under both GNU and BSD sed.
+      - name: Resolve + verify version
+        id: ver
+        run: |
+          set -euo pipefail
+          tag="${RELEASE_TAG}"              # e.g. v1.2.3 or v1.2.3-rc1
+          ver="${tag#v}"                    # strip leading v
+          base="${ver%%-*}"                 # 1.2.3 (drop any -rc1 suffix)
+          proj="$(sed -n 's/^[[:space:]]*VERSION[[:space:]][[:space:]]*\([0-9][0-9.]*\).*/\1/p' \
+                    CMakeLists.txt | head -n1)"
+          echo "Tag base version: ${base}   project() VERSION: ${proj}"
+          if [ "${base}" != "${proj}" ]; then
+            echo "::error::Tag ${tag} (=${base}) does not match project() VERSION ${proj} in CMakeLists.txt"
+            exit 1
+          fi
+          echo "version=${ver}" >> "$GITHUB_OUTPUT"
+          if printf '%s' "${ver}" | grep -Eiq -- '-(rc|alpha|beta)'; then
+            echo "prerelease=true"  >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure + build emc (Release, static)
+        run: |
+          set -euo pipefail
+          configure() {
+            cmake -S . -B build -G Ninja \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DEMC_BUILD_TESTS=OFF \
+              -DEMC_BUILD_EXAMPLES=OFF \
+              -DEMC_WARNINGS_AS_ERRORS=ON
+          }
+          for attempt in 1 2 3; do
+            if configure; then break; fi
+            echo "configure attempt ${attempt} failed; retrying..."; rm -rf build; sleep $((attempt * 10))
+            [ "${attempt}" -eq 3 ] && { echo "::error::configure failed"; exit 1; }
+          done
+          cmake --build build --parallel
+
+      # Installing emc also installs mp-units (headers + its CMake config) into
+      # the same prefix, because emc fetched it via FetchContent. So the package
+      # is self-contained and find_package(emc) resolves with just the prefix.
+      - name: Install emc (+ bundled mp-units) into stage prefix
+        run: cmake --install build --prefix "${STAGE}"
+
+      # install-smoke: a tiny out-of-tree consumer must find_package + link.
+      - name: Consumer smoke test (find_package(emc))
+        run: |
+          set -euxo pipefail
+          mkdir -p consumer
+          cat > consumer/CMakeLists.txt <<'EOF'
+          cmake_minimum_required(VERSION 3.28)
+          project(emc_consumer LANGUAGES CXX)
+          find_package(emc CONFIG REQUIRED)        # pulls find_dependency(mp-units CONFIG)
+          add_executable(use main.cpp)
+          target_link_libraries(use PRIVATE emc::emc)
+          target_compile_features(use PRIVATE cxx_std_23)
+          EOF
+          cat > consumer/main.cpp <<'EOF'
+          #include <emc/export.hpp>
+          int main() { return 0; }
+          EOF
+          cmake -S consumer -B consumer/build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="${STAGE}"
+          cmake --build consumer/build --parallel
+          ./consumer/build/use && echo "install-smoke OK"
+
+      # Deterministic archives: .tar.gz + .zip (both unpack into emc-<ver>.../),
+      # plus a single .sha256 sums file.
+      - name: Create archives + checksums
+        run: |
+          set -euxo pipefail
+          ver="${{ steps.ver.outputs.version }}"
+          name="emc-${ver}-linux-x86_64"
+          mkdir -p dist
+          cp -a "${STAGE}" "${name}"
+          tar --sort=name --owner=0 --group=0 --numeric-owner \
+              --mtime='UTC 2020-01-01' \
+              -czf "dist/${name}.tar.gz" "${name}"
+          zip -X -r -q "dist/${name}.zip" "${name}"
+          ( cd dist && sha256sum "${name}.tar.gz" "${name}.zip" > "${name}.sha256" )
+          echo '----- dist -----'; ls -l dist
+          echo '----- checksums -----'; cat "dist/${name}.sha256"
+
+      - name: Upload artifacts for publish job
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-dist
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+
+  # ===========================================================================
+  # 3. Publish the GitHub Release. Only this job gets write access.
+  # ===========================================================================
+  publish:
+    name: Publish GitHub Release
+    needs: package
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write          # required to create the Release + upload assets
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-dist
+          path: dist
+
+      - name: Create / update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: emc ${{ env.RELEASE_TAG }}
+          tag_name: ${{ env.RELEASE_TAG }}
+          draft: false
+          prerelease: ${{ needs.package.outputs.prerelease == 'true' }}
+          generate_release_notes: true          # auto notes from commits / merged PRs
+          fail_on_unmatched_files: true
+          files: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/*.sha256

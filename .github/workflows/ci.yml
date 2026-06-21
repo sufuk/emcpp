@@ -1,42 +1,301 @@
 # .github/workflows/ci.yml
+#
+# Build + test the `emc` C++23 library on every push to main and every PR,
+# plus a sanitizer pass and an install / find_package(emc) smoke test.
+#
+# Notes that drive the choices below:
+#   * There is NO CMakePresets.json, so every CMake call is a raw
+#     `cmake -S . -B build -G Ninja ...` (never `cmake --preset`).
+#   * ubuntu-24.04 ships g++-14 and clang-18, both new enough for the C++23
+#     std::expected and mp-units 2.5 the code uses. Generator: Ninja.
+#   * The library is built/tested STATIC (its default). A shared build is not
+#     supported yet (some public symbols lack the EMC_API export macro).
+#   * The dependency clones (mp-units v2.5.0 + Catch2 v3.7.1) are slow and have
+#     been seen to flake ('fetch-pack: invalid index-pack output'). We cache the
+#     cloned SOURCE trees (.deps/*-src) and retry the configure step. ccache
+#     caches compilation across runs.
 name: ci
 
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+
+# Cancel superseded runs for a ref, but never auto-cancel on main.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+env:
+  CMAKE_GENERATOR: Ninja
+  CCACHE_DIR: ${{ github.workspace }}/.ccache
+  CCACHE_MAXSIZE: "500M"
+  CCACHE_COMPILERCHECK: content
+  FETCHCONTENT_BASE_DIR: ${{ github.workspace }}/.deps
 
 jobs:
-  build-and-test:
-    name: Build & test (debug)
-    runs-on: ubuntu-latest
+  # ===========================================================================
+  # 1. Build + ctest across gcc-14 and clang-18, Debug and Release. -Werror on.
+  # ===========================================================================
+  build-test:
+    name: ${{ matrix.compiler }} / ${{ matrix.build_type }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [gcc-14, clang-18]
+        build_type: [Debug, Release]
     steps:
-      - uses: actions/checkout@v4
-      - name: Install toolchain
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ninja-build cmake g++-14
-          echo "CXX=g++-14" >> "$GITHUB_ENV"
-      - name: Configure
-        run: cmake --preset debug
-      - name: Build
-        run: cmake --build --preset debug
-      - name: Test
-        run: ctest --preset debug
+      - name: Checkout
+        uses: actions/checkout@v4
 
+      - name: Install toolchain (Ninja, ccache, ${{ matrix.compiler }})
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build ccache
+          case "${{ matrix.compiler }}" in
+            gcc-14)
+              sudo apt-get install -y --no-install-recommends gcc-14 g++-14
+              echo "CC=gcc-14"  >> "$GITHUB_ENV"
+              echo "CXX=g++-14" >> "$GITHUB_ENV"
+              ;;
+            clang-18)
+              sudo apt-get install -y --no-install-recommends clang-18
+              echo "CC=clang-18"    >> "$GITHUB_ENV"
+              echo "CXX=clang++-18" >> "$GITHUB_ENV"
+              ;;
+          esac
+
+      - name: Tool versions
+        run: |
+          cmake --version
+          ninja --version
+          ccache --version | head -n1
+          "${CXX}" --version
+
+      # Cache only the cloned source trees. The *-build/*-subbuild trees hold
+      # compiler- and build-type-specific compiled Catch2 artifacts; caching
+      # them would poison other cells, so Catch2 is recompiled per-config
+      # (sped up by ccache). Restore-key is compiler-scoped only.
+      - name: Cache FetchContent deps
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.FETCHCONTENT_BASE_DIR }}/*-src
+          key: deps-${{ runner.os }}-${{ matrix.compiler }}-${{ hashFiles('cmake/Dependencies.cmake') }}
+          restore-keys: |
+            deps-${{ runner.os }}-${{ matrix.compiler }}-
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.build_type }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.build_type }}-
+
+      - name: Zero ccache stats
+        run: ccache --zero-stats
+
+      # Configure performs the flaky FetchContent clones, so retry it.
+      - name: Configure
+        run: |
+          set -euo pipefail
+          configure() {
+            cmake -S . -B build -G Ninja \
+              -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+              -DEMC_BUILD_TESTS=ON \
+              -DEMC_BUILD_EXAMPLES=ON \
+              -DEMC_WARNINGS_AS_ERRORS=ON \
+              -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+              -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          }
+          for attempt in 1 2 3; do
+            echo "::group::configure attempt ${attempt}"
+            if configure; then echo "::endgroup::"; exit 0; fi
+            echo "::endgroup::"
+            echo "configure attempt ${attempt} failed (likely a flaky dep clone); retrying..."
+            rm -rf build
+            sleep $((attempt * 10))
+          done
+          echo "::error::configure failed after 3 attempts"
+          exit 1
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Test (ctest)
+        working-directory: build
+        # --no-tests=error: a config that yields zero tests fails loudly.
+        run: ctest --output-on-failure --no-tests=error -j "$(nproc)"
+
+      - name: ccache stats
+        if: always()
+        run: ccache --show-stats
+
+  # ===========================================================================
+  # 2. Sanitizer pass: ASan + UBSan under clang-18 / Debug. Flags injected via
+  #    CMAKE_*_FLAGS so no CMakeLists change is needed and -Werror stays on.
+  #    Caches are salted with 'asan' so they never mix with the normal jobs.
+  # ===========================================================================
   sanitizers:
-    name: Sanitizers (ASan/UBSan)
-    runs-on: ubuntu-latest
+    name: asan+ubsan (clang-18 / Debug)
+    runs-on: ubuntu-24.04
+    env:
+      CC: clang-18
+      CXX: clang++-18
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Install toolchain
         run: |
+          set -euxo pipefail
           sudo apt-get update
-          sudo apt-get install -y ninja-build cmake clang-18
-          echo "CXX=clang++-18" >> "$GITHUB_ENV"
-      - name: Configure
-        run: cmake --preset asan
-      - name: Build
-        run: cmake --build --preset asan
+          sudo apt-get install -y --no-install-recommends ninja-build ccache clang-18
+          "${CXX}" --version
+
+      - name: Cache FetchContent deps (sanitized)
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.FETCHCONTENT_BASE_DIR }}/*-src
+          key: deps-${{ runner.os }}-clang-18-asan-${{ hashFiles('cmake/Dependencies.cmake') }}
+          restore-keys: |
+            deps-${{ runner.os }}-clang-18-asan-
+
+      - name: Cache ccache (sanitized)
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-${{ runner.os }}-asan-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ runner.os }}-asan-
+
+      - name: Configure (sanitized)
+        run: |
+          set -euo pipefail
+          SAN_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all"
+          configure() {
+            cmake -S . -B build -G Ninja \
+              -DCMAKE_BUILD_TYPE=Debug \
+              -DEMC_BUILD_TESTS=ON \
+              -DEMC_BUILD_EXAMPLES=OFF \
+              -DEMC_WARNINGS_AS_ERRORS=ON \
+              -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+              -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+              -DCMAKE_C_FLAGS="${SAN_FLAGS}" \
+              -DCMAKE_CXX_FLAGS="${SAN_FLAGS}" \
+              -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined" \
+              -DCMAKE_SHARED_LINKER_FLAGS="-fsanitize=address,undefined"
+          }
+          for attempt in 1 2 3; do
+            echo "::group::configure attempt ${attempt}"
+            if configure; then echo "::endgroup::"; exit 0; fi
+            echo "::endgroup::"
+            echo "configure attempt ${attempt} failed; retrying..."
+            rm -rf build
+            sleep $((attempt * 10))
+          done
+          echo "::error::configure failed after 3 attempts"
+          exit 1
+
+      - name: Build (sanitized)
+        run: cmake --build build --parallel
+
       - name: Test (sanitized)
-        run: ctest --preset asan
+        working-directory: build
+        env:
+          ASAN_OPTIONS: halt_on_error=1:abort_on_error=1:strict_string_checks=1:detect_leaks=1
+          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+        run: ctest --output-on-failure --no-tests=error -j "$(nproc)"
+
+  # ===========================================================================
+  # 3. install-smoke: install emc into a staging prefix, then build a tiny
+  #    out-of-tree consumer via find_package(emc CONFIG REQUIRED).
+  #
+  #    emcConfig.cmake does find_dependency(mp-units CONFIG). We do NOT install
+  #    mp-units separately: building emc fetches mp-units via FetchContent, and
+  #    `cmake --install` then installs mp-units (headers + its CMake config)
+  #    into the SAME prefix, so the package is self-contained and the consumer
+  #    resolves it with just CMAKE_PREFIX_PATH.
+  # ===========================================================================
+  install-smoke:
+    name: install + find_package(emc) consumer
+    runs-on: ubuntu-24.04
+    env:
+      CC: gcc-14
+      CXX: g++-14
+      STAGE: ${{ github.workspace }}/stage
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build ccache gcc-14 g++-14
+
+      - name: Cache FetchContent deps
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.FETCHCONTENT_BASE_DIR }}/*-src
+          key: deps-${{ runner.os }}-install-${{ hashFiles('cmake/Dependencies.cmake') }}
+          restore-keys: |
+            deps-${{ runner.os }}-install-
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-${{ runner.os }}-install-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ runner.os }}-install-
+
+      - name: Configure + build emc (Release, static)
+        run: |
+          set -euo pipefail
+          configure() {
+            cmake -S . -B build -G Ninja \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DEMC_BUILD_TESTS=OFF \
+              -DEMC_BUILD_EXAMPLES=OFF \
+              -DEMC_WARNINGS_AS_ERRORS=ON \
+              -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+              -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          }
+          for attempt in 1 2 3; do
+            if configure; then break; fi
+            echo "configure attempt ${attempt} failed; retrying..."; rm -rf build; sleep $((attempt * 10))
+            [ "${attempt}" -eq 3 ] && { echo "::error::configure failed"; exit 1; }
+          done
+          cmake --build build --parallel
+
+      - name: Install emc (+ bundled mp-units) into stage prefix
+        run: cmake --install build --prefix "${STAGE}"
+
+      - name: Write + build a consumer using find_package(emc)
+        run: |
+          set -euxo pipefail
+          mkdir -p consumer
+          cat > consumer/CMakeLists.txt <<'EOF'
+          cmake_minimum_required(VERSION 3.28)
+          project(emc_consumer LANGUAGES CXX)
+          find_package(emc CONFIG REQUIRED)        # pulls find_dependency(mp-units CONFIG)
+          add_executable(use_emc main.cpp)
+          target_link_libraries(use_emc PRIVATE emc::emc)
+          target_compile_features(use_emc PRIVATE cxx_std_23)
+          EOF
+          cat > consumer/main.cpp <<'EOF'
+          #include <emc/export.hpp>   // proves installed headers are reachable
+          int main() { return 0; }
+          EOF
+          cmake -S consumer -B consumer/build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="${STAGE}"
+          cmake --build consumer/build --parallel
+          ./consumer/build/use_emc && echo "install-smoke OK"
