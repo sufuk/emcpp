@@ -24,5 +24,8 @@ if(EMC_BUILD_TESTS)
             GIT_SHALLOW    TRUE
             SYSTEM)
         FetchContent_MakeAvailable(Catch2)
+        # FetchContent does not register a find_package config, so put Catch2's CMake
+        # helpers (extras/Catch.cmake -> catch_discover_tests) on the module path here.
+        list(APPEND CMAKE_MODULE_PATH "${catch2_SOURCE_DIR}/extras")
     endif()
 endif()

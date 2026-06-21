@@ -30,14 +30,14 @@ namespace emc::component {
 // supplies `0.2 * mm` or `8.0 * mil` and the unit decision is made once, in the
 // type — never by branching inside the math. eps_r is a plain dimensionless double
 // because it is a bare ratio in the formula.
-struct StriplineInput {
+struct StriplineTraceInput {
     emc::units::Length height    {};   // H : plane-to-plane / 2 spacing (dielectric thickness)
     emc::units::Length thickness {};   // T : copper thickness
     emc::units::Length width     {};   // W : trace width
     double             relative_permittivity = 4.7;   // eps_r  [-]
 };
 
-struct StriplineResult {
+struct StriplineTraceResult {
     emc::units::Impedance            z0  {};   // ohm
     emc::units::CapacitancePerLength c0  {};   // F/m (display as pF/inch)
     emc::units::TimePerLength        tpd {};   // s/m (display as ps/inch)
@@ -45,11 +45,11 @@ struct StriplineResult {
 
 // FORWARD: solve characteristic impedance (+ C0, Tpd).
 // [[nodiscard]]: ignoring the Result drops the error path — that is a bug, so warn.
-[[nodiscard]] emc::Result<StriplineResult>    calculate(const StriplineInput&);
+[[nodiscard]] emc::Result<StriplineTraceResult>    calculate(const StriplineTraceInput&);
 
 // Shared validation (eps_r in [1,15]; positivity; T/H < 0.25; H > T; W/(H-T) < 0.35)
 // reported as typed std::expected<void, Error>.
-[[nodiscard]] std::expected<void, emc::Error> validate (const StriplineInput&);
+[[nodiscard]] std::expected<void, emc::Error> validate (const StriplineTraceInput&);
 
 // --- INVERSE solves. Each takes the three known geometry/material fields + a target
 //     Z0 and returns the missing dimension as a typed Length. Distinct names per
@@ -80,8 +80,8 @@ struct StriplineSolveWidth {                   // known: H, T, eps_r, Z0  ->  W
 // Tag binding the forward triple to the Calculator concept (foundation §5). The
 // static_assert checks the (Input, Result, calculate, validate) contract at compile time.
 struct StriplineTrace {
-    using Input  = StriplineInput;
-    using Result = StriplineResult;
+    using Input  = StriplineTraceInput;
+    using Result = StriplineTraceResult;
     static emc::Result<Result> calculate(const Input& in) { return emc::component::calculate(in); }
     static std::expected<void, emc::Error> validate(const Input& in) {
         return emc::component::validate(in);

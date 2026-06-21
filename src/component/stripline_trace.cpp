@@ -37,7 +37,7 @@ Core forward_core(double H, double T, double W, double eps) {
 
 }  // namespace
 
-std::expected<void, emc::Error> validate(const StriplineInput& in) {
+std::expected<void, emc::Error> validate(const StriplineTraceInput& in) {
     // Pull each typed Length into the one working unit as a bare double, then range-check.
     const double H = in.height.numerical_value_in(U);
     const double T = in.thickness.numerical_value_in(U);
@@ -59,7 +59,7 @@ std::expected<void, emc::Error> validate(const StriplineInput& in) {
     return {};
 }
 
-emc::Result<StriplineResult> calculate(const StriplineInput& in) {
+emc::Result<StriplineTraceResult> calculate(const StriplineTraceInput& in) {
     // transform runs the math ONLY if validate() succeeded, forwarding the Error
     // otherwise — the formula is unreachable on bad input, with no if/return noise.
     return validate(in).transform([&] {
@@ -71,7 +71,7 @@ emc::Result<StriplineResult> calculate(const StriplineInput& in) {
         // Re-attach physical units. Each product/quotient has a DERIVED quantity kind that
         // does not implicitly convert to the named alias, so we .in(<alias unit>) then
         // DIRECT-init {..} into the alias — the explicit "this value IS that quantity" relabel.
-        return StriplineResult{
+        return StriplineTraceResult{
             // Z0 is a plain ohm number from the core.
             .z0  = emc::units::Impedance{ (c.z0 * ohm).in(ohm) },
             // C0 is pF/inch, Tpd is ps/inch; store SI (F/m, s/m) and let the caller print

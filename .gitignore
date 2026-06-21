@@ -22,3 +22,6 @@ CMakeUserPresets.json
 *.swp
 *~
 .DS_Store
+
+# isolated GCC verify build dir
+/gcc-verify/

@@ -4,7 +4,7 @@
 #include <algorithm>   // std::max
 #include <cmath>       // std::abs
 #include <catch2/matchers/catch_matchers.hpp>
-#include <catch2/matchers/catch_matchers_floating_point.hpp>
+#include <catch2/matchers/catch_matchers_templated.hpp>   // Catch::Matchers::MatcherGenericBase
 
 #include <mp-units/systems/si.h>
 
@@ -20,10 +20,14 @@ namespace emc::test {
 //   REQUIRE(emc::test::approx(result.skin_depth, 559.0 * um));   // default rel_tol
 //   REQUIRE(emc::test::approx(result.z0, 50.0 * ohm, 1e-4));     // looser tol
 //
-template <class Q>
+// Two type params on purpose: the ACTUAL is usually a kind-pinned emc::units alias
+// (e.g. Conductivity) while the EXPECTED is often a raw value*unit quantity (e.g.
+// 5.96e7 * (S/m)). They may differ in TYPE; we only require the same DIMENSION, which
+// numerical_value_in() checks below — so meters vs ohms is still a build error.
+template <class QA, class QE>
 // [[nodiscard]]: do not ignore the result; a dropped pass/fail check is a bug, so the compiler warns.
 // noexcept: promises not to throw, which lets the compiler optimize and callers rely on it.
-[[nodiscard]] bool approx(Q actual, Q expected, double rel_tol = 1e-6) noexcept {
+[[nodiscard]] bool approx(QA actual, QE expected, double rel_tol = 1e-6) noexcept {
     const auto unit = expected.unit;                       // the unit we will compare in
     const double a  = actual.numerical_value_in(unit);     // won't compile if dimensions differ
     const double e  = expected.numerical_value_in(unit);
@@ -41,7 +45,8 @@ struct UnitMatcher : Catch::Matchers::MatcherGenericBase {
     double rel_tol;
     UnitMatcher(Q e, double t) : expected{e}, rel_tol{t} {}
 
-    bool match(const Q& actual) const { return approx(actual, expected, rel_tol); }
+    template <class QA>
+    bool match(const QA& actual) const { return approx(actual, expected, rel_tol); }
 
     std::string describe() const override {
         return "is within " + std::to_string(rel_tol) + " (relative) of the expected quantity";

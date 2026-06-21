@@ -104,10 +104,10 @@ generate_export_header(emc
 
 if (EMC_BUILD_TESTS)
     enable_testing()
-    #    add_subdirectory(tests)
+    add_subdirectory(tests)
 endif ()
 if (EMC_BUILD_EXAMPLES)
-    #    add_subdirectory(examples)
+    add_subdirectory(examples)
 endif ()
 
 include(cmake/Install.cmake)
