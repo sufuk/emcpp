@@ -74,6 +74,12 @@ using Dimensionless = Q<mpu::one>;                                       // gene
 // ----------------------------------------------------------------------
 using CapacitancePerLength =
     Q<(isq::capacitance / isq::length)[si::farad / si::metre]>;          // F/m
+// Per-length inductance and resistance — used by the transmission-line per-length
+// calculators (coax C/L per foot, trace/wire L/R per metre). One canonical alias each.
+using InductancePerLength =
+    Q<(isq::inductance / isq::length)[si::henry / si::metre]>;           // H/m
+using ResistancePerLength =
+    Q<(isq::resistance / isq::length)[si::ohm / si::metre]>;             // ohm/m
 using TimePerLength =
     Q<(isq::time / isq::length)[si::second / si::metre]>;                // s/m (propagation delay)
 

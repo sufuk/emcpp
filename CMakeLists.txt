@@ -49,7 +49,14 @@ target_sources(emc PRIVATE                     # explicit list, NOT glob
         src/converter/vswr.cpp
         # component
         src/component/capacitance.cpp
+        src/component/inductance.cpp
+        src/component/resistance.cpp
         src/component/harmonic_trap.cpp
+        src/component/microstrip_trace.cpp
+        src/component/stripline_trace.cpp
+        src/component/transmission_line.cpp
+        src/component/dual_stripline_trace.cpp
+        src/component/embedded_microstrip_trace.cpp
         # prediction
         src/prediction/esd_coupling.cpp
         src/prediction/lightning_coupling.cpp
