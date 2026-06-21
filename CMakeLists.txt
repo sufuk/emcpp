@@ -71,10 +71,13 @@ target_sources(emc PRIVATE                     # explicit list, NOT glob
         src/testing/noise_figure.cpp
         # filtering
         src/filtering/ferrite_toroid.cpp
+        # shielding
+        src/shielding/cavity_resonance.cpp
+        src/shielding/shielding_effectiveness.cpp
+        src/shielding/aperture.cpp
+        src/shielding/slot.cpp
         # public headers listed for IDE visibility (headers are not compiled):
         include/emc/core/error.hpp
-        # remaining to implement: component (inductance, resistance, board-impedance,
-        # transmission-line) and shielding (cavity, effectiveness).
 )
 
 target_include_directories(emc PUBLIC
