@@ -3,6 +3,7 @@
 [![ci](https://github.com/sufuk/emcpp/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/sufuk/emcpp/actions/workflows/ci.yml)
 ![C++23](https://img.shields.io/badge/C%2B%2B-23-blue.svg)
 ![CMake](https://img.shields.io/badge/CMake-%E2%89%A53.28-064F8C.svg)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
 A modern **C++23 library of closed-form EMC (electromagnetic-compatibility) engineering calculators**. Each calculator solves one well-known EMC formula — conductor skin depth, microstrip/stripline characteristic impedance, the Friis link budget, shielding effectiveness, cable crosstalk, cavity resonances, and many more — with **compile-time unit safety** powered by [mp-units](https://github.com/mpusz/mp-units).
 
@@ -283,4 +284,9 @@ Releases are **tag-driven** ([`.github/workflows/release.yml`](.github/workflows
 
 ## License
 
-No license file is currently present in this repository. Add a `LICENSE` before distributing or accepting external contributions.
+Licensed under the **[Apache License 2.0](LICENSE)**. You may use, modify, and
+distribute this software — including commercially and in closed-source products —
+provided you retain the copyright and license notices and the [`NOTICE`](NOTICE)
+file, and state any significant changes you make. The license also grants an
+explicit patent license from contributors. See [LICENSE](LICENSE) and
+[NOTICE](NOTICE) for the full terms.
