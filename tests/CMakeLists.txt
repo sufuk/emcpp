@@ -49,10 +49,13 @@ add_executable(emc_tests
     testing/noise_figure_test.cpp
     # filtering
     filtering/ferrite_toroid_test.cpp
+    # validation against the Excel reference vectors (tests/reference/*.csv)
+    validation/reference_test.cpp
 )
 
 target_link_libraries(emc_tests PRIVATE
     emc::emc                            # the library under test (public surface)
+    emc_validation                      # shared runners over tests/reference/*.csv
     Catch2::Catch2WithMain)             # Catch2 v3 provides main()
 
 target_compile_features(emc_tests PRIVATE cxx_std_23)

@@ -318,3 +318,71 @@ jobs:
             -DCMAKE_PREFIX_PATH="${STAGE}"
           cmake --build consumer/build --parallel
           ./consumer/build/use_emc && echo "install-smoke OK"
+
+  # ===========================================================================
+  # 4. validation-report: build the HTML dashboard that shows emc's output vs the
+  #    Excel reference vectors and upload it as an artifact. The reference test in
+  #    build-test is the pass/fail gate; this job always produces the artifact so
+  #    the comparison stays viewable (download "validation-report" -> validation.html).
+  # ===========================================================================
+  validation-report:
+    name: validation HTML report
+    runs-on: ubuntu-24.04
+    env:
+      CC: gcc-14
+      CXX: g++-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build ccache gcc-14 g++-14
+
+      - name: Cache FetchContent deps
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.FETCHCONTENT_BASE_DIR }}/*-src
+          key: deps-${{ runner.os }}-validation-${{ hashFiles('cmake/Dependencies.cmake') }}
+          restore-keys: |
+            deps-${{ runner.os }}-validation-
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-${{ runner.os }}-validation-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ runner.os }}-validation-
+
+      - name: Configure + build the report tool
+        run: |
+          set -euo pipefail
+          configure() {
+            cmake -S . -B build -G Ninja \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DEMC_BUILD_TESTS=OFF \
+              -DEMC_BUILD_EXAMPLES=ON \
+              -DEMC_WARNINGS_AS_ERRORS=ON \
+              -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+              -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          }
+          for attempt in 1 2 3; do
+            if configure; then break; fi
+            echo "configure attempt ${attempt} failed; retrying..."; rm -rf build; sleep $((attempt * 10))
+            [ "${attempt}" -eq 3 ] && { echo "::error::configure failed"; exit 1; }
+          done
+          cmake --build build --target emc_validation_report --parallel
+
+      - name: Generate validation.html
+        run: ./build/validation/emc_validation_report validation.html || true
+
+      - name: Upload validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-report
+          path: validation.html
+          if-no-files-found: error
