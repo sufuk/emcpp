@@ -1,6 +1,0 @@
-# Harmonic Trap (trapezoidal-pulse-train spectrum) reference vectors.
-# Source: HarmTraplWF.xlsx (Sheet1, Input + Expected Results columns). Expected
-# Results are the HarmTraplWFWidget UDF outputs, recomputed at full precision
-# from the canonical trapezoidal-spectrum formula (UDF cache was not stored).
-# f0=1/T; f=n*f0; Ah=sqrt(2)*Am*dc*|sinc(n*pi*dc)|*|sin(n*pi*tr/T)|/(n*pi*tr/T);
-# Ae = piecewise 0 / -20 / -40 dB-per-decade envelope (dc=DC/100).

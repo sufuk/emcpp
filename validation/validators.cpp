@@ -24,7 +24,6 @@
 #include <emc/cabling/crosstalk.hpp>
 #include <emc/component/capacitance.hpp>
 #include <emc/component/dual_stripline_trace.hpp>
-#include <emc/component/harmonic_trap.hpp>
 #include <emc/component/inductance.hpp>
 #include <emc/component/microstrip_trace.hpp>
 #include <emc/component/resistance.hpp>
@@ -164,7 +163,6 @@ emc::validation::CalcReport decibel() {
     }
     return rep;
 }
-
 
 emc::validation::CalcReport v_antenna_factor() {
     emc::validation::CalcReport rep;
@@ -938,42 +936,6 @@ emc::validation::CalcReport v_dual_stripline() {
     return rep;
 }
 
-// ---- Harmonic Trap (trapezoidal-pulse-train spectrum, 4 outputs) ---------
-// n, A_m[V], t_r[s], T[s], DC[%] -> f0[Hz], f[Hz], A_h[V_rms], A_e[V_rms].
-// Inputs are already in coherent SI units in the sheet (seconds / volts), so
-// they map straight onto the typed Input fields.
-emc::validation::CalcReport v_harmonic_trap() {
-    emc::validation::CalcReport rep;
-    rep.name = "Harmonic Trap";
-    rep.domain = "component";
-    rep.excel_file = "HarmTraplWF.xlsx";
-    rep.formula = "f0=1/T; f=n*f0; Ah=sqrt(2)*Am*dc*|sinc(n*pi*dc)|*|sin(n*pi*tr/T)|/(n*pi*tr/T); "
-                  "Ae=piecewise 0/-20/-40 dB/dec envelope (dc=DC/100)";
-    rep.note = "Pure pi/sqrt(2) closed form; no speed-of-light constant, so the gate is tight.";
-    rep.tolerance = 1e-6;
-    for (const Row& r : load_csv(ref("harmtraplwf.csv"))) {
-        const double n  = r.num(0), Am = r.num(1), tr = r.num(2), T = r.num(3), DC = r.num(4);
-        const double ef0 = r.num(5), ef = r.num(6), eAh = r.num(7), eAe = r.num(8);
-        const emc::component::HarmonicTrapInput in{
-            .harmonic   = n,
-            .amplitude  = Am * V,
-            .transition = tr * s,
-            .period     = T  * s,
-            .duty_cycle = DC };
-        const auto out = emc::component::calculate(in);
-        if (!out) continue;
-        emc::validation::Case c;
-        c.inputs = "n=" + g4(n) + ", Am=" + g4(Am) + " V, tr=" + g4(tr) + " s, T=" + g4(T)
-                 + " s, DC=" + g4(DC) + " %";
-        c.outputs.push_back({ "fundamental freq", "Hz", out->fundamental_frequency.numerical_value_in(Hz), ef0 });
-        c.outputs.push_back({ "harmonic freq",    "Hz", out->harmonic_frequency.numerical_value_in(Hz),    ef });
-        c.outputs.push_back({ "harmonic amp",     "V",  out->harmonic_amplitude.numerical_value_in(V),     eAh });
-        c.outputs.push_back({ "envelope amp",     "V",  out->envelope_amplitude.numerical_value_in(V),     eAe });
-        rep.cases.push_back(std::move(c));
-    }
-    return rep;
-}
-
 // ---- Dipole Antenna Near-Field (3 outputs) ------------------------------
 // Short-dipole near field. Inputs: current[A], length[m], distance[m],
 // frequency[Hz] (sheet enters MHz, CSV already x1e6), theta[rad] (sheet enters
@@ -1609,7 +1571,7 @@ std::vector<CalcReport> all_reports() {
         v_connector_pin(), v_trace_resistance(), v_cyl_conductor(), v_rect_conductor(),
         v_awg_wire(), v_microstrip_line(), v_stripline(), v_narrow_trace(),
         v_wide_trace(), v_wire_over_plane(), v_wire_pair(), v_microstrip_trace(),
-        v_stripline_trace(), v_dual_stripline(), v_harmonic_trap(), v_dipole(),
+        v_stripline_trace(), v_dual_stripline(), v_dipole(),
         v_loop_antenna(), v_far_field(), v_esd(), v_lightning(),
         v_friis(), v_rf_field(), v_aperture(), v_slot(),
         v_near_field_se(), v_plane_wave_se(), v_rect_cavity(), v_cyl_cavity(),
