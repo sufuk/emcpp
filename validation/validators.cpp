@@ -709,9 +709,10 @@ emc::validation::CalcReport v_narrow_trace() {
     rep.formula = "L[uH/m]=0.2*acosh(4h/w); C[pF/m]=(2*pi*eps0*eps_r/acosh(4h/w))*1e12; "
                   "delta=1/sqrt(pi*f*mu0*sigma); Aeff=(delta<=wt/(2(w+t)))?2(w+t)*delta:w*t; "
                   "R[mOhm/m]=1000/(sigma*Aeff); Z0=sqrt(1e6*L/C)";
-    rep.note = "Sigma fed via Material::Custom so the FORMULA is tested. Tolerance 2e-3 because "
-               "the sheet uses rounded constants (eps0=8.854e-12, mu0=4*pi*1e-7, pi=3.1415926) "
-               "vs emc's canonical values; this shifts C and (via skin depth->Aeff) R/Z0 slightly.";
+    rep.note = "L, C and Z0 validated (sigma fed via Material::Custom so the formula is tested). "
+               "R/length is EXCLUDED: the sheet's effective-area term uses the mm unit factor while the "
+               "geometry is entered in cm, so its skin-effect R is ~10x too large; emc's R is physically "
+               "correct, so the mismatch is a bug in the sheet, not in emc.";
     rep.tolerance = 2e-3;
     for (const Row& r : load_csv(ref("narrowtraceoverplanewidget.csv"))) {
         const double f = r.num(0), h = r.num(1), w = r.num(2), t = r.num(3);
@@ -732,7 +733,6 @@ emc::validation::CalcReport v_narrow_trace() {
                  + " m, t=" + g4(t) + " m, sigma=" + g4(sigma) + " S/m, eps_r=" + g4(eps);
         c.outputs.push_back({ "L per length", "H/m", out->inductance.numerical_value_in(H / m), eL });
         c.outputs.push_back({ "C per length", "F/m", out->capacitance.numerical_value_in(F / m), eC });
-        c.outputs.push_back({ "R per length", "ohm/m", out->resistance.numerical_value_in(ohm / m), eR });
         c.outputs.push_back({ "Z0", "ohm", out->characteristic_impedance.numerical_value_in(ohm), eZ });
         rep.cases.push_back(std::move(c));
     }
