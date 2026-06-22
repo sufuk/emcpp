@@ -1,0 +1,6 @@
+# Reference vectors from MicrostripLineCurrentDistributionWidget.xlsx (Excel formula = ground truth).
+# J[A/m] = (I0/(pi*w)) * 1/(1+(x/h)^2). Inputs SI: mA->A (x0.001), mm->m (x0.001).
+# i0_A,x_m,h_m,w_m,exp_J_Apm
+0.005,0.0256,0.0574,0.06490000000000001,0.02045450295
+0.0545,0.004,0.0757,0.0268,0.6455069748
+0.0256,0.023100000000000002,0.016,0.0182,0.1451596894

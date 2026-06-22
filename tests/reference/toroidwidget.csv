@@ -1,0 +1,6 @@
+# Source: ToroidWidget.xlsx Sheet1, Expected Results column (spreadsheet FORMULA output).
+# Formula: L = (mu0 * N^2 * h / (2*pi)) * ln(b/a)   [b=outer radius, a=inner radius]
+# Units SI: turns [-], height/outer_radius/inner_radius [m], inductance [H]. (sheet cm->m, uH->H)
+# turns,height_m,outer_radius_m,inner_radius_m,inductance_H
+5.511035613,0.0025066137500000005,0.1971838967,0.026621873580000004,3.04884582e-08
+19.92962171,0.1864461306,0.15425096140000003,0.0365428,2.132913003e-05

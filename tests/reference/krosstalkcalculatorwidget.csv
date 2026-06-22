@@ -1,0 +1,6 @@
+# Source: KrosstalkCalculatorWidget.xlsx (Sheet1, Expected Results columns V_NE_dB, V_FE_dB).
+# Forward inductive+capacitive crosstalk. SI: f[Hz], R*[ohm], L_m[H], C_m[F]; outputs V_NE,V_FE [dB].
+# V_NE=20log10(2pi f[(RNE/(RNE+RFE))(Lm/(RS+RL))+(RNE RFE/(RNE+RFE))(RL Cm/(RS+RL))]); V_FE uses -RFE term; V_FE=nan where Excel #NUM! (arg<=0 -> emc clamps to -200 dB, no ground truth).
+# f_Hz,R_L_ohm,R_S_ohm,R_NE_ohm,R_FE_ohm,L_m_H,C_m_F,V_NE_dB,V_FE_dB
+1000000.0,50.0,50.0,50.0,50.0,5e-07,9.468360000000001e-08,17.44562071,17.40892627
+89920000.0,68.873,18.574,48.603,41.734,4e-07,7.983760000000001e-08,58.05182988,58.02369292

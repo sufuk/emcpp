@@ -1,0 +1,6 @@
+# Source: SolenoidWidget.xlsx (Expected Results = spreadsheet formula output)
+# Formula: L = mu0 * N^2 * pi * r^2 / l  (r,l in m; expected L in H)
+# turns,radius_m,length_m,expected_L_H
+5.511035613,0.0025066137500000005,0.1971838967,3.820582325e-09
+19.92962171,0.1864461306,0.15425096140000003,0.0003533757288
+13.20836439,0.1334045525,0.07038126032,0.00017415745970000002

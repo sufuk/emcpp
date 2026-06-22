@@ -1,0 +1,6 @@
+# Reference vectors from ESDCouplingLevelWidget.xlsx (Excel formula = ground truth).
+# Vind = (mu0*h)/(2*pi) * ln((r+d)/r) * (Ipeak/tr); tr in seconds. Output stored in SI volt.
+# r_m,h_m,d_m,Ipeak_A,tr_s,exp_Vind_V
+0.2,8.0,0.79,68.0,9.000000000000001e-09,19334.8187
+4.4,10.0,0.04,101.0,3.0000000000000004e-09,609.3555917
+6.0,4.0,0.87,103.0,2e-09,5578.671045

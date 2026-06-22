@@ -1,0 +1,6 @@
+# Reference vectors from RectangularConductorWidget.xlsx (Excel formula = ground truth).
+# delta=sqrt(rho/(pi*f*mu0*mu_r)); A=w*t; thr=A/(2(w+t)); if delta>=thr: R/m=rho/A else R/m=rho/(2(w+t)*delta); R_total=R/m*l.
+# NOTE: the sheet's 'Resistance Per Meter' column carries an extra x1000 (it is ohm/km); exp_Rpm below is that value /1000 = true ohm/m.
+# Inputs->SI: f Hz; l km->m (x1000); w,t cm->m (x0.01); rho ohm*m; mu_r dimensionless. Material fed as Custom+custom_resistivity.
+# f_Hz,l_m,w_m,t_m,rho_ohmm,mu_r,exp_Rpm_ohmpm,exp_Rtot_ohm
+18.6539241791023,11159.1840163615,0.150032031852767,0.0986604625166675,2.82e-08,1.0,2.8972999999999998e-06,0.0323318

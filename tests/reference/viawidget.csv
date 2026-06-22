@@ -1,0 +1,6 @@
+# Source: ViaWidget.xlsx Sheet1, Expected Results column (spreadsheet formula output)
+# Formula: L = (mu0*h/2pi)*(ln(4h/d)-1); inputs h,d in mm->m (x0.001), L in nH->H (x1e-9)
+# h_m,d_m,L_H
+0.005511035613,0.01971838967,-9.793162837e-10
+0.01992962171,0.01542509614,2.560979156e-09
+0.01320836439,0.007038126032,2.6834184680000004e-09

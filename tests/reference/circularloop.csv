@@ -1,0 +1,6 @@
+# Circular Loop Inductance reference, from CircularLoop.xlsx (Expected Results column E, data_only).
+# Formula: L = N^2 * R * mu0 * mu_r * (ln(8R/a) - 2); sheet output nH = formula*1e9.
+# Inputs R,a already in metres; expected L converted nH -> H (x1e-9). mu0 sheet=4pi/1e7 = exact mu0.
+# turns,loop_radius_m,wire_radius_m,mu_r,L_H
+5.511035613,0.250661375,19.71838967,2.662187358,-0.00010915168230000001
+19.92962171,18.64461306,15.42509614,3.65428,0.009147876505000001

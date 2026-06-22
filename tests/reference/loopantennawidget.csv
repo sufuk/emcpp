@@ -1,0 +1,6 @@
+# Source: LoopAntennaWidget.xlsx (Sheet1), Expected Results columns F:H = sheet FORMULA output (ground truth).
+# Small-loop near-field model. SI units: current A, loop_area m^2, distance m, frequency Hz, theta rad; H_r/H_theta A/m, E_phi V/m.
+# H_r=(f/c)(I0 A/R^2)cos(th)sqrt(1+(c/(2 pi f R))^2); H_theta=(f/2c)(I0 A/R)sin(th)sqrt((1/R)^2+((2 pi f/c)-(c/(2 pi f R^2)))^2); E_phi=120(pi f/c)^2(I0 A/R)sin(th)sqrt(1+(c/(2 pi f R))^2)
+# current_A,loop_area_m2,distance_m,frequency_Hz,theta_rad,H_r_Apm,H_theta_Apm,E_phi_Vpm
+41.8,4.2,36.2,6100000.0,2.7401669256310974,-0.00257,0.0024,0.94838
+40.6,2.7,37.2,2100000.0,2.8623399732707004,-0.00062,0.00011,0.0552

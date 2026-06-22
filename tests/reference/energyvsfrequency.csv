@@ -1,0 +1,6 @@
+# Source: EnergyvsFrequency.xlsx (Planck E = h*f, solved for f). Input Energy[neV], expected Frequency[MHz].
+# energy_J = neV * 1e-9 * 1.602176634e-19 (exact 2019-SI eV); frequency_Hz = MHz * 1e6. Sheet uses rounded h=6.6261e-34.
+# energy_J,frequency_Hz
+2.8384376392634643e-26,42833860.029999994
+1.0711792879700731e-25,161647883.5
+1.1728741799244771e-26,17699430.05

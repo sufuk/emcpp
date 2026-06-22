@@ -1,0 +1,6 @@
+# Source: StandardGaugeWireWidget.xlsx (Expected Results = sheet formula, ground truth)
+# dm=0.0254*0.005*92^((36-g)/39); A=pi*(dm/2)^2; delta=1/sqrt(pi*f*mu_r*mu0/rho);
+# Aeff=2pi*(dm/2)*delta; R/m = rho/(delta>=dm/4 ? A : Aeff); R = (R/m)*l
+# rho fed as Custom resistivity [ohm*m]; f[Hz], l[m]; gauge is integer AWG string
+# f_Hz,length_m,gauge_awg,rho_ohm_m,mu_r,rpm_ohm_per_m,rtot_ohm
+18.6539241791023,11.1591840163615,39,2.82e-08,1.0,4.4634739,49.8087262

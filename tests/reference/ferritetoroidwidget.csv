@@ -1,0 +1,6 @@
+# Reference vectors from FerriteToroidWidget.xlsx (Excel formula = ground truth).
+# L=(mu0*N^2*h/(2pi))*ln(b/a); X=2pi*f*ur_real*L; R=2pi*f*ur_imag*L; Z=sqrt(X^2+R^2). f MHz->Hz.
+# N,ur_real,ur_imag,h_m,b_m,a_m,f_Hz,expL_H,expX_ohm,expR_ohm,expZ_ohm
+1000.0,100.0,50.0,0.05,0.04,0.03,1000000.0,0.002876820725,1807559.771,903779.8854,2020913.26
+58.0,27.0,21.0,12.0,3.0,746.0,300000.0,-0.04453489243,-2266549.952,-1762872.185,2871405.062
+63.0,47.0,23.0,12.0,4.0,2222.0,300000.0,-0.06020054042,-5333341.23,-2609932.942,5937699.777

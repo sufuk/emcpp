@@ -1,0 +1,6 @@
+# Reference vectors from NearFieldShieldingEffectivenessWidget.xlsx (Excel formula = ground truth).
+# Near-Field SE, Electric (high-Z) field: Zw=1/(2*pi*f*eps0*r); Ns=sqrt(2*pi^2*4e-7*mu_r*f/sigma); delta=1/sqrt(pi^2*4e-7*mu_r*sigma*f); RL=20*log10(Zw/(4*Ns)); AL=8.7*(t/delta); SE=RL+AL.
+# r_m,t_m,f_Hz,mu_r,sigma_Spm,exp_reflection_dB,exp_absorption_dB,exp_shielding_dB
+0.002206244,6.273800000000001e-05,4300000.0,1.0,58000000.0,175.8395955,17.12687056,192.9664661
+0.0024201120000000003,0.00020447000000000003,9600000.0,1.0,58000000.0,164.5718737,83.40235835,247.9742321
+0.0016360139999999999,0.002251202,3700000.0,1.0,58000000.0,180.394928,570.0703399,750.4652678

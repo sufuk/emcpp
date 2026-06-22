@@ -1,0 +1,6 @@
+# Reference vectors from NarrowTraceOverPlaneWidget.xlsx (Excel FORMULA column = ground truth).
+# L[uH/m]=0.2*acosh(4h/w); C[pF/m]=(2*pi*eps0*eps_r/acosh(4h/w))*1e12; delta=1/sqrt(pi*f*mu0*sigma);
+# Aeff=(delta<=wt/(2(w+t)))?2(w+t)*delta:w*t; R[mOhm/m]=1000/(sigma*Aeff); Z0=sqrt(1e6*L/C).
+# Inputs->SI: f Hz; cm->m (x0.01); sigma S/m. Expected->SI: uH/m->H/m, pF/m->F/m, mOhm/m->ohm/m, Z0 ohm.
+# f_Hz,h_m,w_m,t_m,sigma_Spm,eps_r,exp_L_Hpm,exp_C_Fpm,exp_R_ohmpm,exp_Z0_ohm
+22.0,0.11,0.05,0.02,58000000.0,1.0,5.729309700000001e-07,1.941990418e-11,0.08740759534999999,171.7622055

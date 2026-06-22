@@ -1,0 +1,6 @@
+# Reference vectors from WirePairWidget.xlsx (Excel formula = ground truth).
+# L[uH/m]=0.4*acosh(s/d); C[pF/m]=(pi*eps0*eps_r/acosh(s/d))*1e12; R[mOhm/m]=2000/(sigma*Aeff); Z0=sqrt(1e6*L/C). Aeff via skin depth delta=1/sqrt(pi*f*mu0*sigma).
+# Inputs to SI: MHz->Hz, cm->m (x0.01). Expected to SI: uH/m->H/m (x1e-6), pF/m->F/m (x1e-12), mOhm/m->ohm/m (x1e-3), ohm as-is. sigma fed as Custom.
+# f_Hz,spacing_m,diameter_m,sigma_Spm,eps_r,exp_L_Hpm,exp_C_Fpm,exp_R_ohmpm,exp_Z0_ohm
+20000000.0,0.16,0.15,58000000.0,1.0,1.452598433e-07,7.659559785e-11,0.004951875727,43.54826735
+19929621.71,0.1864461306,0.15425096140000003,58000000.0,1.0,2.5414178389999996e-07,4.377975307e-11,0.004806928323,76.19059816

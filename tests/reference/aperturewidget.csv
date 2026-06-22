@@ -1,0 +1,6 @@
+# Source: ApertureWidget.xlsx Sheet1, column E (spreadsheet formula = ground truth).
+# Aperture absorption (cutoff) loss; Round: AL=32*depth/diameter, Slot: AL=27.3*depth/width (lengths in inches).
+# Inputs converted inch->m (x0.0254). shape: 0=Slot(Rectangular), 1=Round(Circular). expected AL in dB.
+# depth_m,width_m,diameter_m,shape,expected_dB
+2.206244,2.244598,0.062738,1,1125.311741
+2.420112,1.1668759999999998,0.20447,0,56.62046147

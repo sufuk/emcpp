@@ -1,0 +1,6 @@
+# Source: CircuitBoardTraceWidget.xlsx Sheet1, Expected Results (sheet formula).
+# Trace (rectangular copper) resistance. delta=1/sqrt(pi*f*mu0*sigma); A=w*t; perim=2(w+t);
+# if delta>=A/perim: R/len=rho/A else rho/(perim*delta); rho=1.72e-8. R_total=R/len*l.
+# f_Hz,l_m,w_m,t_m,Rperm_ohm_per_m,Rtotal_ohm
+18.65392418,0.1115918402,0.015003203190000002,0.00034531161881999996,0.00332,0.0003705
+2.577244916,0.07466901086,0.01239181344,0.00062831098225,0.0022099999999999997,0.000165

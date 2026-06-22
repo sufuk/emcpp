@@ -1,0 +1,6 @@
+# Source: MicroStripLineWidget.xlsx (Sheet1), Wheeler/Hammerstad microstrip line.
+# All rows are the W/H>1 branch: eps_eff=(er+1)/2+((er-1)/2)/sqrt(1+12 h/w); Z0=(120 PI/sqrt(eps_eff))/(w/h+1.393+(2/3)ln(w/h+1.444)).
+# Inputs in SI: width_m, height_m converted from mm. Expected (Excel FORMULA output): impedance_ohm, eff_permittivity (dimensionless).
+# eps_r,width_m,height_m,impedance_ohm,eff_permittivity
+10.0,0.009,0.001,10.84336209,8.445941518
+11.0,0.01,0.002,16.72039204,8.711630723

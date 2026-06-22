@@ -1,0 +1,6 @@
+# Reference vectors from CableBraidOpticalCoverageWidget.xlsx (Excel formula = ground truth).
+# theta=atan(2*pi*(D+2d)*P/C); F=P*N*d/sin(theta); OC=2F-F^2 (fraction; sheet stores 100*OC).
+# Inputs converted to SI: inch->m (x0.0254); P picks/inch -> picks/m (/0.0254). C,N are counts.
+# d_m,D_m,P_per_m,C,N,exp_oc_fraction,exp_theta_rad,exp_fill_factor
+2.206244,2.244598,1614.1732283464567,75.0,20.0,-5072892924.367565,1.5696854985630937,71225.24394381147
+2.420112,1.1668759999999998,1811.023622047244,83.0,30.0,-17288435902.572372,1.5695820742179705,131486.4969324464

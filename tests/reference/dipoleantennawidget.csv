@@ -1,0 +1,6 @@
+# Source: DipoleAntennaWidget.xlsx (Expected Results = sheet FORMULA output, ground truth)
+# Short-dipole near field. Er=60*(I0*l/R^2)*cos(th)*sqrt(1+(c/(2pi f R))^2); Et=30*(I0*l/R)*sin(th)*sqrt((1/R)^2+((2pi f/c)-(c/(2pi f R^2)))^2); Hphi=(f/(2c))*(I0*l/R)*sin(th)*sqrt(1+(c/(2pi f R))^2)
+# Sheet uses c=3e8, pi=3.14; emc uses exact constants -> c/pi-dependent. f entered in MHz (D*1e6 Hz), theta in degrees->radians.
+# current_A,length_m,distance_m,frequency_Hz,theta_rad,e_r_Vpm,e_theta_Vpm,h_phi_Apm
+1.0,6.6,6.7,6300000.0,1.3962634015954636,2.312804451,4.474441312,0.01537917344
+2.9,6.3,8.5,7400000.0,0.17453292519943295,18.75903833,1.508715012,0.005779329908

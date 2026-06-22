@@ -1,0 +1,6 @@
+# Source: EFieldvsPowerDensityWidget.xlsx (Sheet1, Expected Results = spreadsheet formula output)
+# Formula: power_density = E^2 / eta = (1/wave_impedance) * EField^2
+# E [V/m], eta [ohm] -> power_density [W/m^2]
+# efield_Vpm,wave_impedance_ohm,power_density_Wpm2
+177.161342827539,711.133297739938,44.13538431
+668.577524623963,595.375308454538,750.7800543

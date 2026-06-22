@@ -1,0 +1,6 @@
+# Source: ParallelPlateWidget.xlsx (Sheet1). Parallel-plate capacitor, air dielectric (eps_r=1).
+# Sheet formula: C[pF] = (8.85 * A[m^2]) / d[m]  (eps0 rounded to 8.85e-12 F/m). emc uses exact eps0.
+# area_m2,distance_m,capacitance_F
+5.511035613,19.71838967,2.473460865e-12
+19.92962171,15.42509614,1.143442806e-11
+13.20836439,7.038126032,1.660868594e-11

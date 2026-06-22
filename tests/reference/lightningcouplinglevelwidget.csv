@@ -1,0 +1,6 @@
+# Reference vectors from LightningCouplingLevelWidget.xlsx (Excel formula = ground truth).
+# Vind = (mu0*h)/(2*pi) * ln((r+d)/r) * di_dt ; r=radius, h=loop_height, d=distance, di_dt=current slew rate.
+# All values already SI: r,h,d in m; di_dt in A/s; Vind in V.
+# r_m,h_m,d_m,didt_Aps,exp_Vind_V
+0.2,8.0,0.79,1126282511.0,2882.179609
+4.4,10.0,0.04,671017457.0,12.14519523

@@ -1,0 +1,6 @@
+# Source: WavelengthvsFrequency.xlsx (Sheet1), Expected Results column = sheet FORMULA output
+# Formula: f = c / lambda  with sheet c = 3e8 m/s (vs emc exact c => ~0.07% offset)
+# wavelength_m,frequency_Hz
+177.1613428,1693371.676
+668.5775246,448713.8573
+73.20504837,4098078.024

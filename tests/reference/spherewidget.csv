@@ -1,0 +1,6 @@
+# Source: SphereWidget.xlsx (Sheet1). Isolated conducting sphere capacitance.
+# Excel Expected Results column uses C = 111 * r (pF), a rounded form of C = 4*pi*eps0*r.
+# Columns: r in meters (SI), C in farads (pF * 1e-12).
+# radius_m,capacitance_F
+5.511035613,6.11724953e-10
+19.92962171,2.2121880099999996e-09

@@ -1,0 +1,6 @@
+# Source: CylindricalConductorWidget.xlsx (Sheet1), Expected Results columns (sheet formula = ground truth).
+# Formula: delta=1/sqrt(pi*f*mu_r*mu0/rho), mu0=4*pi*1e-7. DC: R/m=rho/(pi*(d/2)^2); skin: R/m=rho/(2*pi*(d/2)*delta); R=R/m*l. Sheet ROUNDs both outputs to 7 decimals.
+# f_Hz,l_m,d_m,rho_ohm_m,mu_r,exp_R_per_m_ohm_per_m,exp_R_total_ohm
+5.511035613,0.250661375,0.1971838967,2.82e-08,1.0,1.3e-06,3e-07
+19.92962171,18.64461306,0.15425096140000003,2.4e-08,1.0,2.8e-06,5.29e-05
+13.20836439,13.34045525,0.07038126032,1.59e-08,1.0,4.1e-06,5.49e-05

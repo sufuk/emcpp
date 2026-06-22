@@ -1,0 +1,6 @@
+# Source: ConnectorPinWidget.xlsx (Expected Results = sheet formula, ground truth)
+# L = (mu0*l/2pi)*(ln(2l/r) - 3/4);  M = (mu0*l/2pi)*(ln(2l/s) - 1)
+# Inputs l,r,s in metres; expected self/mutual converted nH -> H (x1e-9)
+# length_m,radius_m,spacing_m,self_H,mutual_H
+0.01,0.0003,0.00254,6.899410156e-09,2.127136385e-09
+19.92962171,18.64461306,15.42509614,3.905039284e-08,-2.018530634e-07

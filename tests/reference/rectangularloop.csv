@@ -1,0 +1,6 @@
+# Rectangular Loop Inductance - reference vectors from RectangularLoop.xlsx (Expected Results column F).
+# L = N^2 (mu0 mu_r / pi) [ -2(w+h) + 2 sqrt(w^2+h^2) - h ln((h+sqrt(w^2+h^2))/w) - w ln((w+sqrt(w^2+h^2))/h) + h ln(2h/a) + w ln(2w/a) ]
+# Sheet uses pi=3.14 and mu0=1.256637061e-6; emc uses exact pi and mu0 (dominant ~5e-4 rel error).
+# turns, width_m, height_m, wire_radius_m, mu_r, L_H
+5.511035613,0.250661375,19.71838967,0.002662187358,7.390603841,0.008123429150000002
+19.92962171,18.64461306,15.42509614,0.00365428,1.846649108,0.07665449992000001

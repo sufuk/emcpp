@@ -1,0 +1,6 @@
+# Source: CylindricalEnclosureWidget.xlsx (shielding) - dominant cylindrical cavity mode ef111
+# Formula (sheet, ground truth): f = (47714000 / sqrt(eps_r)) * sqrt((1.841/r)^2 + (3.14159/L)^2); 47714000 = c/(2pi)
+# L,r already in metres; f in Hz
+# length_m,radius_m,eps_r,f_dominant_Hz
+86.86,2.47,4.3,17170350.52
+95.28,8.05,9.6,3558242.64

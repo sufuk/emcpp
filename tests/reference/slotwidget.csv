@@ -1,0 +1,6 @@
+# Source: SlotWidget.xlsx Sheet1; ground truth = column C (Expected Results, sheet FORMULA output).
+# Formula: SE_dB = 20*log10( (c/f) / (2*length) ); sheet uses c=3e8 m/s.
+# Inputs converted to SI: f MHz->Hz (x1e6), length already in m. Output SE in dB.
+# f_Hz,length_m,se_dB
+86860000.0,2.47,-3.108510385
+95280000.0,8.05,-14.1741274

@@ -1,0 +1,6 @@
+# Reference vectors from PlaneWaveShieldingEffectivenessWidget.xlsx (Excel formula = ground truth).
+# Plane-wave SE: RL=20*log10(377/(4*Ns)), Ns=sqrt(2*pi^2*4e-7*mu_r*f/sigma); AL=8.7*(t/delta), delta=1/sqrt(pi^2*4e-7*mu_r*sigma*f); SE=AL+RL.
+# t_m,f_Hz,mu_r,sigma_Spm,exp_reflection_dB,exp_absorption_dB,exp_se_dB
+0.004499898107819491,711133297.739938,1.0,58000000.0,79.62649965,15797.60698,15877.23348
+0.01698186912544866,595375308.454538,1.0,58000000.0,80.39810159,54549.90732,54630.30543
+0.0018594082286486349,106325927.089446,1.0,58000000.0,87.87961801,2524.105222,2611.98484

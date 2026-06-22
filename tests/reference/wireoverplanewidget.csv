@@ -1,0 +1,6 @@
+# Reference vectors from WireOverPlaneWidget.xlsx (Excel FORMULA = ground truth; cached data_only cells were stale/rotated, so values are recomputed from the sheet formulas).
+# L[uH/m]=0.2*acosh(h/a); C[pF/m]=(2*pi*eps0*eps_r/acosh(h/a))*1e12 (eps0=8.854e-12); delta=1/sqrt(pi*f*mu0*sigma); Aeff=(delta<=a/2)?2*pi*a*delta:pi*a^2; R[mOhm/m]=1000/(sigma*Aeff); Z0=sqrt(1e6*L/C).
+# Inputs->SI: cm->m (x0.01); sigma S/m. Outputs->SI: uH/m->H/m, pF/m->F/m, mOhm/m->ohm/m, Z0 ohm. Conductor fed as Custom+custom_sigma to test the formula.
+# f_Hz,h_m,a_m,sigma_Spm,eps_r,exp_L_Hpm,exp_C_Fpm,exp_R_ohmpm,exp_Z0_ohm
+5.511035613,0.22,0.1971838967,58000000.0,1.0,9.530779829547926e-08,1.1674033553545797e-10,4.943461667288053e-07,28.572862410829877
+19.92962171,0.1864461306,0.15425096140000003,58000000.0,1.0,1.2707089193211605e-07,8.75595046433127e-11,1.2017320808388258e-06,38.09529940395237

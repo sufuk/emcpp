@@ -1,0 +1,6 @@
+# Reference vectors from DualStriplineTraceWidget.xlsx (Excel formula = ground truth).
+# Z0=0.5*(60*ln(8*H/(0.67*pi*(0.8*W+T)))/sqrt(eps)+60*ln(8*(H+C)/(0.67*pi*(0.8*W+T)))/sqrt(eps)); Tpd[ps/in]=84.75*sqrt(eps); C0[pF/in]=Tpd/Z0.
+# Inputs converted to SI: mils->m (x2.54e-5). Outputs: Z0 ohm; C0 pF/inch->F/m, Tpd ps/inch->s/m (x1e-12/0.0254).
+# H_m,C_m,T_m,W_m,eps_r,exp_Z0_ohm,exp_C0_Fpm,exp_Tpd_spm
+0.0030988,0.00021590000000000002,0.00020574,0.000635,9.866046252,54.19472524,1.9338400267716534e-10,1.0480392889763782e-08
+0.0059182,0.00030480000000000004,0.00023368,0.00037846,9.0,75.22235881,1.3307004299212598e-10,1.0009842519685038e-08

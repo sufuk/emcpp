@@ -1,0 +1,6 @@
+# Source: AntennaFactorvsAntennaGain.xlsx (Sheet1), Expected Results = sheet FORMULA output (ground truth).
+# Formula: lambda = c/f; gain_dBi = 10*log10( (9.73 / (lambda * 10^(AF/20)))^2 ). Sheet uses c=3e8.
+# f_Hz,AF_dBpm,gain_dBi
+42600000.0,29.7,-26.89197544
+413000000.0,64.9,-42.36115488
+30700000.0,35.0,-35.0374029

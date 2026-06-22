@@ -1,0 +1,6 @@
+# Source: StripLineWidget.xlsx (Sheet1, Expected Results = sheet formula = ground truth)
+# Z0 = (60/sqrt(eps_r)) * ln( 1.9*(2*h + t) / (0.8*w + t) )  [ohm]
+# eps_r dimensionless; width/height/thickness are bare lengths fed in metres (ratios cancel)
+# eps_r,width_m,height_m,thickness_m,Z0_ohm
+479.808472035364,851.640104987491,247.738469167491,577.9033525283,1.320761949
+628.299086294742,42.9106943113313,903.34335181459,515.273009648208,4.985643926

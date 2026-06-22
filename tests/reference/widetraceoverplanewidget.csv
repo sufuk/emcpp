@@ -1,0 +1,6 @@
+# Source: WideTraceOverPlaneWidget.xlsx Sheet1, Expected Results columns (spreadsheet formula output).
+# Wide trace over plane (w>5h): L=0.4*pi*h/w [uH/m]; C=eps0*eps_r*(w/h)*1e12 [pF/m]; delta=1/sqrt(pi*f*mu0*sigma); Aeff=(delta<=wt/(w+t))?(w+t)*delta:w*t; R=1000/(sigma*Aeff) [mOhm/m]; Z0=sqrt(1e6*L/C) [ohm].
+# SI: f[Hz],h[m],w[m],t[m],sigma[S/m],eps_r; expected L[H/m],C[F/m],R[ohm/m],Z0[ohm].
+# f_Hz,h_m,w_m,t_m,sigma_Spm,eps_r,L_Hpm,C_Fpm,R_ohmpm,Z0_ohm
+5511035.613,0.000250661375,0.01971838967,0.01600606463,58000000.0,1.0,1.597444715e-08,6.965038875e-10,0.017144186130000003,4.789069571
+19929621.71,0.0005,0.01542509614,0.002842355905,58000000.0,1.0,4.0733524450000004e-08,2.7314760239999997e-10,0.06375840141,12.21173294

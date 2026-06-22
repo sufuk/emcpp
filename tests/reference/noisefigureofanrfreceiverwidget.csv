@@ -1,0 +1,6 @@
+# Source: NoiseFigureofanRFReceiverWidget.xlsx (Sheet1); Expected Results columns (sheet formula = ground truth)
+# Friis cascade, 3 stages: F=10^(N1/10)+(10^(N2/10)-1)/10^(G1/10)+(10^(N3/10)-1)/(10^(G1/10)*10^(G2/10)); NF=10*log10(F); Gtot=G1+G2+G3
+# N1_dB,G1_dB,N2_dB,G2_dB,N3_dB,G3_dB,NF_dB,Gtot_dB
+86.86,2.47,88.37,4.3,50.7,2.8,89.41689468,9.57
+95.28,8.05,45.94,9.6,92.5,3.8,95.31916625,21.45
+64.41,88.63,83.27,3.7,94.7,7.8,64.41000317,100.13

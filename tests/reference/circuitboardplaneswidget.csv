@@ -1,0 +1,6 @@
+# source: CircuitBoardPlanesWidget.xlsx (Expected Results = sheet formula, ground truth)
+# f_mn = (150000000 / sqrt(eps_r)) * sqrt((m/L)^2 + (n/W)^2) [Hz]; dominant = min over 12 (m,n) modes = f10
+# units: length_m, width_m, separation_m (sheet col C is mm -> *0.001), eps_r (-), dominant_Hz
+# length_m,width_m,separation_m,eps_r,dominant_Hz
+86.86,2.47,0.08837,4.3,832793.2688
+95.28,8.05,0.04594,9.6,508105.4978

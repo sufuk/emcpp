@@ -1,0 +1,6 @@
+# Reference vectors from SquareLoop.xlsx (Excel formula = ground truth).
+# L[H] = N^2 * (2*mu0*mu_r*W/pi) * (ln(W/a) - 0.774); sheet mu0=1.256637061e-6.
+# All inputs SI: N[-], W[m], a[m], mu_r[-]. Expected L in henry [H].
+# N,W_m,a_m,mu_r,exp_L_H
+5.511035613,0.250661375,0.01971838967,2.662187358,2.867478057e-05
+19.92962171,18.64461306,0.01542509614,3.65428,0.13689520280000003

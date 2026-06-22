@@ -1,0 +1,6 @@
+# Reference vectors from MicrostripTraceWidget.xlsx (Excel formula = ground truth).
+# Z0=87*ln(5.98*h/(0.8*w+t))/sqrt(eps_r+1.41) [ohm]; C0=0.67*(eps_r+1.41)/ln(...)/2.54 [pF/cm]; Tpd=C0term*Z0/2.54 [ps/cm].
+# Inputs h,t,w mm->m (x1e-3); eps_r dimensionless. Outputs C0 pF/cm->F/m (x1e-10); Tpd ps/cm->s/m (x1e-10); Z0 in ohm.
+# h_m,t_m,w_m,eps_r,exp_Z0_ohm,exp_C0_Fpm,exp_Tpd_spm
+0.01865392418,0.01115918402,0.015003203190000002,5.0,54.01767455,1.075606627e-10,5.810176874e-09
+0.012,0.011,0.015,8.0,32.27029733,2.1814847610000003e-10,7.039716186e-09
