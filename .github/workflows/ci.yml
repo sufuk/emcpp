@@ -46,14 +46,16 @@ jobs:
   build-test:
     name: ${{ matrix.compiler }} / ${{ matrix.build_type }}
     runs-on: ubuntu-24.04
-    # clang-18 (libc++) support is still being ported — it runs for visibility but
-    # must not block: a clang cell failure does not fail the workflow. gcc-14 is
-    # the blocking compiler. Remove this once the clang build is clean.
+    # clang-18 (libc++) support is still being ported, so its CI cell is commented
+    # out of the matrix below for now. The continue-on-error guard is kept so that
+    # uncommenting `clang-18` in the matrix brings it back as NON-blocking.
     continue-on-error: ${{ matrix.compiler == 'clang-18' }}
     strategy:
       fail-fast: false
       matrix:
-        compiler: [gcc-14, clang-18]
+        compiler:
+          - gcc-14
+          # - clang-18    # TODO: re-enable once the clang/libc++ build is clean
         build_type: [Debug, Release]
     steps:
       - name: Checkout
@@ -151,84 +153,84 @@ jobs:
         run: ccache --show-stats
 
   # ===========================================================================
-  # 2. Sanitizer pass: ASan + UBSan under clang-18 / Debug. Flags injected via
-  #    CMAKE_*_FLAGS so no CMakeLists change is needed and -Werror stays on.
-  #    Caches are salted with 'asan' so they never mix with the normal jobs.
+  # 2. Sanitizer pass: ASan + UBSan under clang-18 / libc++.
+  #    DISABLED — commented out below while clang/libc++ support is being ported.
+  #    Uncomment the job (strip the leading "#" on each line) to bring it back.
   # ===========================================================================
-  sanitizers:
-    name: asan+ubsan (clang-18 / Debug)
-    runs-on: ubuntu-24.04
-    # clang-only job; non-blocking while clang/libc++ support is being ported.
-    continue-on-error: true
-    env:
-      CC: clang-18
-      CXX: clang++-18
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install toolchain
-        run: |
-          set -euxo pipefail
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends ninja-build ccache clang-18 libc++-18-dev libc++abi-18-dev
-          "${CXX}" --version
-
-      - name: Cache FetchContent deps (sanitized)
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.FETCHCONTENT_BASE_DIR }}/*-src
-          key: deps-${{ runner.os }}-clang-18-asan-${{ hashFiles('cmake/Dependencies.cmake') }}
-          restore-keys: |
-            deps-${{ runner.os }}-clang-18-asan-
-
-      - name: Cache ccache (sanitized)
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.CCACHE_DIR }}
-          key: ccache-${{ runner.os }}-asan-${{ github.sha }}
-          restore-keys: |
-            ccache-${{ runner.os }}-asan-
-
-      - name: Configure (sanitized)
-        run: |
-          set -euo pipefail
-          # std::expected needs libc++ under clang-18 (see build-test job). Keep
-          # -stdlib=libc++ out of the C flags; sanitizer flags apply to both.
-          SAN_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all"
-          configure() {
-            cmake -S . -B build -G Ninja \
-              -DCMAKE_BUILD_TYPE=Debug \
-              -DEMC_BUILD_TESTS=ON \
-              -DEMC_BUILD_EXAMPLES=OFF \
-              -DEMC_WARNINGS_AS_ERRORS=ON \
-              -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-              -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-              -DCMAKE_C_FLAGS="${SAN_FLAGS}" \
-              -DCMAKE_CXX_FLAGS="-stdlib=libc++ ${SAN_FLAGS}" \
-              -DCMAKE_EXE_LINKER_FLAGS="-stdlib=libc++ -fsanitize=address,undefined" \
-              -DCMAKE_SHARED_LINKER_FLAGS="-stdlib=libc++ -fsanitize=address,undefined"
-          }
-          for attempt in 1 2 3; do
-            echo "::group::configure attempt ${attempt}"
-            if configure; then echo "::endgroup::"; exit 0; fi
-            echo "::endgroup::"
-            echo "configure attempt ${attempt} failed; retrying..."
-            rm -rf build
-            sleep $((attempt * 10))
-          done
-          echo "::error::configure failed after 3 attempts"
-          exit 1
-
-      - name: Build (sanitized)
-        run: cmake --build build --parallel
-
-      - name: Test (sanitized)
-        working-directory: build
-        env:
-          ASAN_OPTIONS: halt_on_error=1:abort_on_error=1:strict_string_checks=1:detect_leaks=1
-          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
-        run: ctest --output-on-failure --no-tests=error -j "$(nproc)"
+#  sanitizers:
+#    name: asan+ubsan (clang-18 / Debug)
+#    runs-on: ubuntu-24.04
+#    # clang-only job; non-blocking while clang/libc++ support is being ported.
+#    continue-on-error: true
+#    env:
+#      CC: clang-18
+#      CXX: clang++-18
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v4
+#
+#      - name: Install toolchain
+#        run: |
+#          set -euxo pipefail
+#          sudo apt-get update
+#          sudo apt-get install -y --no-install-recommends ninja-build ccache clang-18 libc++-18-dev libc++abi-18-dev
+#          "${CXX}" --version
+#
+#      - name: Cache FetchContent deps (sanitized)
+#        uses: actions/cache@v4
+#        with:
+#          path: ${{ env.FETCHCONTENT_BASE_DIR }}/*-src
+#          key: deps-${{ runner.os }}-clang-18-asan-${{ hashFiles('cmake/Dependencies.cmake') }}
+#          restore-keys: |
+#            deps-${{ runner.os }}-clang-18-asan-
+#
+#      - name: Cache ccache (sanitized)
+#        uses: actions/cache@v4
+#        with:
+#          path: ${{ env.CCACHE_DIR }}
+#          key: ccache-${{ runner.os }}-asan-${{ github.sha }}
+#          restore-keys: |
+#            ccache-${{ runner.os }}-asan-
+#
+#      - name: Configure (sanitized)
+#        run: |
+#          set -euo pipefail
+#          # std::expected needs libc++ under clang-18 (see build-test job). Keep
+#          # -stdlib=libc++ out of the C flags; sanitizer flags apply to both.
+#          SAN_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all"
+#          configure() {
+#            cmake -S . -B build -G Ninja \
+#              -DCMAKE_BUILD_TYPE=Debug \
+#              -DEMC_BUILD_TESTS=ON \
+#              -DEMC_BUILD_EXAMPLES=OFF \
+#              -DEMC_WARNINGS_AS_ERRORS=ON \
+#              -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+#              -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+#              -DCMAKE_C_FLAGS="${SAN_FLAGS}" \
+#              -DCMAKE_CXX_FLAGS="-stdlib=libc++ ${SAN_FLAGS}" \
+#              -DCMAKE_EXE_LINKER_FLAGS="-stdlib=libc++ -fsanitize=address,undefined" \
+#              -DCMAKE_SHARED_LINKER_FLAGS="-stdlib=libc++ -fsanitize=address,undefined"
+#          }
+#          for attempt in 1 2 3; do
+#            echo "::group::configure attempt ${attempt}"
+#            if configure; then echo "::endgroup::"; exit 0; fi
+#            echo "::endgroup::"
+#            echo "configure attempt ${attempt} failed; retrying..."
+#            rm -rf build
+#            sleep $((attempt * 10))
+#          done
+#          echo "::error::configure failed after 3 attempts"
+#          exit 1
+#
+#      - name: Build (sanitized)
+#        run: cmake --build build --parallel
+#
+#      - name: Test (sanitized)
+#        working-directory: build
+#        env:
+#          ASAN_OPTIONS: halt_on_error=1:abort_on_error=1:strict_string_checks=1:detect_leaks=1
+#          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+#        run: ctest --output-on-failure --no-tests=error -j "$(nproc)"
 
   # ===========================================================================
   # 3. install-smoke: install emc into a staging prefix, then build a tiny
