@@ -53,6 +53,17 @@ std::string sci(double v) {
     return std::string{b};
 }
 
+std::string pct(double v) {
+    char b[40];
+    std::snprintf(b, sizeof b, "%.3g", v * 100.0);
+    return std::string{b} + "%";
+}
+
+// Error display: scientific form plus a percentage, e.g. "6.31e-02 (6.31%)".
+std::string ep(double v) {
+    return sci(v) + " (" + pct(v) + ")";
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -137,7 +148,7 @@ a.lnk{color:var(--accent)}
     o << "<header><h1>emc &mdash; validation vs Excel reference</h1><div class=\"chips\">";
     o << "<div class=\"chip\"><b>" << reports.size() << "</b> calculators</div>";
     o << "<div class=\"chip\"><b>" << total_cmp << "</b> comparisons</div>";
-    o << "<div class=\"chip\">worst error <b>" << sci(overall_max) << "</b></div>";
+    o << "<div class=\"chip\">worst error <b>" << ep(overall_max) << "</b></div>";
     o << "<div class=\"chip\">"
       << (all_pass ? "<span class=\"pill ok\">ALL PASS</span>" : "<span class=\"pill bad\">FAIL</span>")
       << "</div></div></header>";
@@ -181,7 +192,7 @@ a.lnk{color:var(--accent)}
             o << "<tr class=\"clk\" onclick=\"show('c" << i << "')\"><td>" << esc(r.name)
               << "</td><td class=\"n\"><code style=\"font-size:11px\">" << esc(r.csv_file)
               << "</code></td><td class=\"n\">" << r.comparison_count()
-              << "</td><td class=\"n\">" << sci(r.display_max())
+              << "</td><td class=\"n\">" << ep(r.display_max())
               << "</td><td class=\"n\">" << sci(r.tolerance) << "</td><td>"
               << (r.passed() ? "<span class=\"pill ok\">PASS</span>" : "<span class=\"pill bad\">FAIL</span>")
               << "</td></tr>";
@@ -198,8 +209,8 @@ a.lnk{color:var(--accent)}
           << "</div>";
         o << "<div class=\"meta\">Reference: <code>tests/reference/" << esc(r.csv_file) << "</code>"
           << " &middot; " << r.comparison_count() << " comparisons"
-          << " &middot; max error " << sci(r.display_max())
-          << " &middot; avg " << sci(r.display_avg())
+          << " &middot; max error " << ep(r.display_max())
+          << " &middot; avg " << ep(r.display_avg())
           << " &middot; tolerance " << sci(r.tolerance) << "</div>";
         o << "<div class=\"formula\">" << esc(r.formula) << "</div>";
         if (!r.note.empty()) o << "<div class=\"note\">" << esc(r.note) << "</div>";
@@ -213,7 +224,7 @@ a.lnk{color:var(--accent)}
                   << esc(cmp.quantity) << "</td><td class=\"n\">" << num(cmp.computed)
                   << "</td><td class=\"n\">" << num(cmp.expected) << "</td><td class=\"n\">"
                   << esc(cmp.unit) << "</td><td class=\"n " << (ok ? "err-ok" : "err-bad") << "\">"
-                  << sci(cmp.display_error(r.abs_floor)) << "</td></tr>";
+                  << ep(cmp.display_error(r.abs_floor)) << "</td></tr>";
                 first = false;
             }
         }
@@ -230,7 +241,7 @@ a.lnk{color:var(--accent)}
     o.close();
 
     std::cout << "wrote " << out_path << ": " << reports.size() << " calculators, "
-              << total_cmp << " comparisons, worst error " << sci(overall_max)
+              << total_cmp << " comparisons, worst error " << ep(overall_max)
               << (all_pass ? " (ALL PASS)\n" : " (FAIL)\n");
     return all_pass ? 0 : 2;
 }
