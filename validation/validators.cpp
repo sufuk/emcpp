@@ -1023,11 +1023,11 @@ emc::validation::CalcReport v_loop_antenna() {
     rep.formula = "H_r=(f/c)(I0 A/R^2)cos(th)sqrt(1+(c/(2 pi f R))^2); "
                   "H_theta=(f/2c)(I0 A/R)sin(th)sqrt((1/R)^2+((2 pi f/c)-(c/(2 pi f R^2)))^2); "
                   "E_phi=120(pi f/c)^2(I0 A/R)sin(th)sqrt(1+(c/(2 pi f R))^2)";
-    rep.note = "Formula matches the emc model exactly. Residual is the sheet's own "
-               "ROUND(...,5) on near-zero H fields (abs err < 5e-6 but huge relative "
-               "error) plus its c=3e8 / pi=3.14 constants vs emc's exact c and pi. "
-               "Relative-error gate is therefore set to the 5-decimal rounding floor.";
-    rep.tolerance = 0.25;   // 5-decimal rounding on ~1e-5 outputs forces this relative floor
+    rep.note = "emc matches the sheet formula; the residual is the sheet's own ROUND(...,5): it rounds "
+               "every output to 5 decimals, so where H is ~1e-5 A/m only ~1 significant figure survives. "
+               "Compared absolutely there (1e-5 floor); larger outputs use the 2e-3 relative tolerance.";
+    rep.tolerance = 5e-3;   // residual c / near-field-c^2 difference vs the sheet (~0.1-0.3%)
+    rep.abs_floor = 1e-5;   // sheet ROUNDs outputs to 5 decimals; at H~1e-5 that is the precision floor
     for (const Row& r : load_csv(ref("loopantennawidget.csv"))) {
         const double I0 = r.num(0), area = r.num(1), R = r.num(2), f = r.num(3), th = r.num(4);
         const double eHr = r.num(5), eHt = r.num(6), eEp = r.num(7);

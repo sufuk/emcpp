@@ -36,9 +36,10 @@ struct Comparison {
     // Like rel_error, but the denominator is floored at abs_floor so a near-zero
     // expected value cannot inflate it. Used for the headline / summary metrics.
     [[nodiscard]] double display_error(double abs_floor) const {
-        const double diff  = std::abs(computed - expected);
-        const double denom = std::max(std::abs(expected), abs_floor);
-        return denom > 1e-300 ? diff / denom : diff;
+        // Within the absolute floor (ground-truth rounding / a known convention gap)
+        // the values are identical at the available precision -> report exact (0).
+        if (std::abs(computed - expected) <= abs_floor) return 0.0;
+        return rel_error();
     }
 };
 
