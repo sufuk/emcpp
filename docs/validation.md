@@ -4,6 +4,8 @@ Every emcpp calculator is validated against **trusted reference spreadsheets** â
 
 [:material-television-guide: **Open the live validation dashboard**](dashboard.html){ .md-button .md-button--primary }
 
+*The dashboard is regenerated from the real calculators on every deploy (see [Development & CI](development.md#documentation-this-site)), so it always matches the current library.*
+
 ## How it works
 
 ```

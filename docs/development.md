@@ -42,3 +42,5 @@ Releases are **tag-driven** ([`release.yml`](https://github.com/sufuk/emcpp/blob
 ## Documentation (this site)
 
 This site is built by [`docs.yml`](https://github.com/sufuk/emcpp/blob/main/.github/workflows/docs.yml): **MkDocs Material** for the guides + **Doxygen** for the [API reference](api/index.html), deployed to GitHub Pages on every push to `main`.
+
+As part of that build, the [validation dashboard](dashboard.html) is **regenerated from the real calculators** — `docs.yml` builds the same `emc_validation_report` tool the CI gate uses and runs it over the reference CSVs, so the published dashboard can never drift from the library. The committed `docs/dashboard.html` is only a convenience snapshot for local `mkdocs build`; CI overwrites it with a fresh one before publishing (and falls back to the snapshot if the C++ build flakes).

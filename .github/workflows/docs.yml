@@ -1,5 +1,6 @@
-# Build the documentation site (MkDocs Material) + the Doxygen C++ API reference
-# and publish them to GitHub Pages. Requires: repo public (or GitHub Pro) and
+# Build the documentation site (MkDocs Material) + the Doxygen C++ API reference,
+# regenerate the live validation dashboard from the real calculators, and publish
+# everything to GitHub Pages. Requires: repo public (or GitHub Pro) and
 # Settings -> Pages -> Source = "GitHub Actions".
 name: docs
 
@@ -13,9 +14,20 @@ permissions:
   pages: write
   id-token: write
 
+# Key the group by ref so a non-main verification dispatch can never cancel an
+# in-flight `main` deploy (only `main` actually deploys; see the deploy job).
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: true
+
+env:
+  CMAKE_GENERATOR: Ninja
+  CCACHE_DIR: ${{ github.workspace }}/.ccache
+  CCACHE_MAXSIZE: "500M"
+  CCACHE_COMPILERCHECK: content
+  FETCHCONTENT_BASE_DIR: ${{ github.workspace }}/.deps
+  CC: gcc-14
+  CXX: g++-14
 
 jobs:
   build:
@@ -36,6 +48,76 @@ jobs:
             echo "HTML_EXTRA_STYLESHEET = doxygen-awesome-css/doxygen-awesome.css doxygen-awesome-css/doxygen-awesome-sidebar-only.css";
           } | doxygen -
 
+      # --- Regenerate the validation dashboard from the real calculators -------
+      # docs/dashboard.html is committed only as a convenience snapshot so that
+      # `mkdocs build` works without a C++ toolchain. Here we rebuild it from the
+      # actual emc library + reference CSVs (the same emc_validation_report tool
+      # the CI gate uses) so the PUBLISHED dashboard can never drift from the
+      # validators. This whole section is non-blocking: if the C++ build flakes,
+      # the committed snapshot is used and the docs still publish.
+      - name: Install C++ toolchain (gcc-14, Ninja, ccache)
+        id: toolchain
+        continue-on-error: true
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build ccache gcc-14 g++-14
+
+      - name: Cache FetchContent deps
+        if: steps.toolchain.outcome == 'success'
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.FETCHCONTENT_BASE_DIR }}/*-src
+          key: deps-${{ runner.os }}-docs-${{ hashFiles('cmake/Dependencies.cmake') }}
+          restore-keys: |
+            deps-${{ runner.os }}-docs-
+            deps-${{ runner.os }}-validation-
+
+      - name: Cache ccache
+        if: steps.toolchain.outcome == 'success'
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-${{ runner.os }}-docs-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ runner.os }}-docs-
+            ccache-${{ runner.os }}-validation-
+
+      # EMC_BUILD_EXAMPLES=ON is REQUIRED: emc_validation_report is only defined
+      # under that option (validation/CMakeLists.txt). --target builds just that
+      # tool (not the examples). EMC_REFERENCE_DIR is baked absolute, so the tool
+      # finds tests/reference/*.csv regardless of cwd.
+      - name: Build the report tool + regenerate docs/dashboard.html
+        id: dashboard
+        if: steps.toolchain.outcome == 'success'
+        continue-on-error: true
+        # NOTE: a separate build dir (cmake-build), NOT build/ — the Doxygen step
+        # writes build/doxygen/html and the configure-retry below does
+        # `rm -rf cmake-build`, which must never touch the API reference.
+        run: |
+          set -euo pipefail
+          configure() {
+            cmake -S . -B cmake-build -G Ninja \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DEMC_BUILD_TESTS=OFF \
+              -DEMC_BUILD_EXAMPLES=ON \
+              -DEMC_WARNINGS_AS_ERRORS=ON \
+              -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+              -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          }
+          for attempt in 1 2 3; do
+            if configure; then break; fi
+            echo "configure attempt ${attempt} failed; retrying..."; rm -rf cmake-build; sleep $((attempt * 10))
+            [ "${attempt}" -eq 3 ] && { echo "::error::configure failed"; exit 1; }
+          done
+          cmake --build cmake-build --target emc_validation_report --parallel
+          ./cmake-build/validation/emc_validation_report docs/dashboard.html
+          echo "Regenerated docs/dashboard.html ($(wc -c < docs/dashboard.html) bytes)"
+
+      - name: Note if the dashboard fell back to the committed snapshot
+        if: steps.toolchain.outcome != 'success' || steps.dashboard.outcome != 'success'
+        run: echo "::warning::Live dashboard build failed; publishing the committed docs/dashboard.html snapshot instead."
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.x'
@@ -44,7 +126,7 @@ jobs:
         run: |
           set -euxo pipefail
           pip install mkdocs-material
-          mkdocs build            # outputs to ./site
+          mkdocs build            # outputs to ./site (copies the fresh dashboard.html)
 
       - name: Fold the API reference into the site (/api)
         run: |
@@ -57,6 +139,10 @@ jobs:
 
   deploy:
     needs: build
+    # Only the published branch deploys to Pages. workflow_dispatch on any other
+    # branch still runs the build job above (handy for verifying the site without
+    # publishing), but skips this deploy.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     environment:
       name: github-pages
