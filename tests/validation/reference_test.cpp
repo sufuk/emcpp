@@ -22,7 +22,7 @@ TEST_CASE("reference vectors match the Excel ground truth", "[reference][excel]"
                      << ": emc=" << cmp.computed << "  excel=" << cmp.expected
                      << " " << cmp.unit << "  rel_err=" << cmp.rel_error()
                      << "  tol=" << rep.tolerance);
-                CHECK(cmp.rel_error() <= rep.tolerance);
+                CHECK(cmp.within(rep.tolerance, rep.abs_floor));
             }
         }
     }

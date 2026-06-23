@@ -159,7 +159,7 @@ a{color:var(--accent)}
             bool first = true;
             for (const auto& cmp : c.outputs) {
                 const double e = cmp.rel_error();
-                const bool ok = e <= r.tolerance;
+                const bool ok = cmp.within(r.tolerance, r.abs_floor);
                 o << "<tr><td>" << (first ? esc(c.inputs) : std::string{}) << "</td><td>"
                   << esc(cmp.quantity) << "</td><td class=\"n\">" << num(cmp.computed)
                   << "</td><td class=\"n\">" << num(cmp.expected) << "</td><td class=\"n\">"

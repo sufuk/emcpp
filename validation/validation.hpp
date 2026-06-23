@@ -28,6 +28,11 @@ struct Comparison {
         const double denom = std::abs(expected);
         return denom > 1e-300 ? diff / denom : diff;
     }
+    // Pass test: small ABSOLUTE difference (for values near zero, where relative
+    // error explodes) OR small relative error.
+    [[nodiscard]] bool within(double rel_tol, double abs_floor) const {
+        return std::abs(computed - expected) <= abs_floor || rel_error() <= rel_tol;
+    }
 };
 
 // One reference row: the inputs (as a human-readable label) and every output
@@ -44,7 +49,8 @@ struct CalcReport {
     std::string excel_file;  // "CoaxialLineWidget.xlsx"
     std::string formula;     // human-readable formula(s)
     std::string note;        // optional caveat (e.g. constants difference)
-    double      tolerance = 1e-6;   // pass gate: max relative error must be <= this
+    double      tolerance = 1e-6;   // pass gate: relative error must be <= this
+    double      abs_floor = 0.0;    // ...unless the absolute difference is <= this (near-zero values)
     std::vector<Case> cases;
 
     [[nodiscard]] double max_error() const {
@@ -65,7 +71,12 @@ struct CalcReport {
         for (const auto& c : cases) n += c.outputs.size();
         return n;
     }
-    [[nodiscard]] bool passed() const { return max_error() <= tolerance; }
+    [[nodiscard]] bool passed() const {
+        for (const auto& c : cases)
+            for (const auto& o : c.outputs)
+                if (!o.within(tolerance, abs_floor)) return false;
+        return true;
+    }
 };
 
 } // namespace emc::validation
