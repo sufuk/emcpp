@@ -72,6 +72,7 @@ emc::validation::CalcReport skin_depth() {
     rep.name = "Skin Depth";
     rep.domain = "basic";
     rep.excel_file = "SkinDepth.xlsx";
+    rep.csv_file = "skin_depth.csv";
     rep.formula = "delta = sqrt(1 / (pi * f * mu0 * mu_r * sigma))";
     rep.tolerance = 1e-6;
     for (const Row& r : load_csv(ref("skin_depth.csv"))) {
@@ -96,6 +97,7 @@ emc::validation::CalcReport vswr() {
     rep.name = "VSWR mismatch figures";
     rep.domain = "converter";
     rep.excel_file = "VSWR_RC_RL_ML_TL.xlsx";
+    rep.csv_file = "vswr.csv";
     rep.formula = "Gamma=(v-1)/(v+1); RL=-20log10(Gamma); ML=-10log10(1-Gamma^2); IL=-10log10((1+Gamma)^2)";
     rep.tolerance = 1e-6;
     for (const Row& r : load_csv(ref("vswr.csv"))) {
@@ -119,6 +121,7 @@ emc::validation::CalcReport coaxial() {
     rep.name = "Coaxial Line";
     rep.domain = "component";
     rep.excel_file = "CoaxialLineWidget.xlsx";
+    rep.csv_file = "coaxial_line.csv";
     rep.formula = "Z0=138 log10(D/d)/sqrt(eps); fc=11.8/(sqrt(eps) pi (D+d)/2); C=7.354 eps/log10(D/d); L=140.4 log10(D/d)";
     rep.tolerance = 1e-4;   // cutoff folds in c; the empirical 11.8/etc. constants set the floor
     for (const Row& r : load_csv(ref("coaxial_line.csv"))) {
@@ -144,6 +147,7 @@ emc::validation::CalcReport decibel() {
     rep.name = "Decibel Calculator";
     rep.domain = "basic";
     rep.excel_file = "DecibelCalculatorWidget.xlsx";
+    rep.csv_file = "decibel.csv";
     rep.formula = "Vgain=10^(dB/20); Pgain=10^(dB/10); P=10^((dBm-30)/10); Vrms=sqrt(P*R); Vpeak=Vrms*sqrt(2)";
     rep.tolerance = 1e-6;
     for (const Row& r : load_csv(ref("decibel.csv"))) {
@@ -169,6 +173,7 @@ emc::validation::CalcReport v_antenna_factor() {
     rep.name = "Antenna Factor vs Gain";
     rep.domain = "converter";
     rep.excel_file = "AntennaFactorvsAntennaGain.xlsx";
+    rep.csv_file = "antennafactorvsantennagain.csv";
     rep.formula = "lambda = c/f; gain_dBi = 10*log10( (9.73 / (lambda * 10^(AF/20)))^2 )";
     rep.note = "emc and the sheet use slightly different constants in the AF<->gain conversion, so the "
                "gain differs by up to ~0.4 dB at high antenna factor (most rows agree to <0.05 dB). An "
@@ -194,6 +199,7 @@ emc::validation::CalcReport v_efield_pd() {
     rep.name = "E-Field vs Power Density";
     rep.domain = "converter";
     rep.excel_file = "EFieldvsPowerDensityWidget.xlsx";
+    rep.csv_file = "efieldvspowerdensitywidget.csv";
     rep.formula = "P_D = E^2 / eta = (1 / wave_impedance) * EField^2";
     rep.note = "Pure algebraic formula, no rounded physical constant involved; tolerance 1e-6.";
     rep.tolerance = 1e-6;
@@ -218,6 +224,7 @@ emc::validation::CalcReport v_energy_freq() {
     rep.name = "Energy vs Frequency";
     rep.domain = "converter";
     rep.excel_file = "EnergyvsFrequency.xlsx";
+    rep.csv_file = "energyvsfrequency.csv";
     rep.formula = "f = E / h   (Planck E = h*f, solved for frequency)";
     rep.note = "Sheet uses rounded h=6.6261e-34 and 1eV=1/6.242e18 J; emc uses exact SI h=6.62607015e-34 "
                "and 1eV=1.602176634e-19 J, so the rounded-constant difference sets the error floor (~1e-4).";
@@ -244,6 +251,7 @@ emc::validation::CalcReport v_wavelength_freq() {
     rep.name = "Wavelength vs Frequency";
     rep.domain = "converter";
     rep.excel_file = "WavelengthvsFrequency.xlsx";
+    rep.csv_file = "wavelengthvsfrequency.csv";
     rep.formula = "f = c / lambda";
     rep.note = "Sheet uses c=3e8 m/s vs emc's exact c (299792458 m/s) => ~0.07% uniform offset; tolerance 2e-3.";
     rep.tolerance = 2e-3;
@@ -267,6 +275,7 @@ emc::validation::CalcReport v_parallel_plate() {
     rep.name = "Parallel-Plate Capacitor";
     rep.domain = "component";
     rep.excel_file = "ParallelPlateWidget.xlsx";
+    rep.csv_file = "parallelplatewidget.csv";
     rep.formula = "C = eps0 * eps_r * A / d   (sheet uses air, eps_r = 1)";
     rep.note = "Sheet rounds eps0 to 8.85e-12 F/m; emc uses exact eps0 = 8.8541878128e-12, "
                "a ~4.7e-4 relative offset, so tolerance is relaxed accordingly.";
@@ -295,6 +304,7 @@ emc::validation::CalcReport v_sphere() {
     rep.name = "Isolated Sphere Capacitance";
     rep.domain = "component";
     rep.excel_file = "SphereWidget.xlsx";
+    rep.csv_file = "spherewidget.csv";
     rep.formula = "C = 4 * pi * eps0 * r";
     rep.note = "Sheet's expected column uses C = 111 * r (pF); 111 is a rounded "
                "4*pi*eps0 = 111.265 pF/m, so emc's exact constant differs by ~0.24%.";
@@ -317,6 +327,7 @@ emc::validation::CalcReport v_circular_loop() {
     rep.name = "Circular Loop Inductance";
     rep.domain = "component";
     rep.excel_file = "CircularLoop.xlsx";
+    rep.csv_file = "circularloop.csv";
     rep.formula = "L = N^2 * R * mu0 * mu_r * (ln(8R/a) - 2)";
     rep.note = "Sheet output is nH (formula * 1e9); reference converted to H. Sheet mu0 = 4*pi/1e7 equals the exact mu0, so no constant mismatch.";
     rep.tolerance = 1e-6;
@@ -342,6 +353,7 @@ emc::validation::CalcReport v_rect_loop() {
     rep.name = "Rectangular Loop Inductance";
     rep.domain = "component";
     rep.excel_file = "RectangularLoop.xlsx";
+    rep.csv_file = "rectangularloop.csv";
     rep.formula = "L = N^2 (mu0 mu_r / pi) [ -2(w+h) + 2 sqrt(w^2+h^2) - h ln((h+sqrt(w^2+h^2))/w) - w ln((w+sqrt(w^2+h^2))/h) + h ln(2h/a) + w ln(2w/a) ]";
     rep.note = "Sheet's Expected-Results formula hardcodes pi=3.14 (and mu0=1.256637061e-6); emc uses exact pi and mu0, so the relative error is dominated by 1 - pi/3.14 ~= 5.1e-4. Tolerance set to 1e-3 to cover that constant difference.";
     rep.tolerance = 1e-3;
@@ -369,6 +381,7 @@ emc::validation::CalcReport v_square_loop() {
     rep.name = "Square Loop Inductance";
     rep.domain = "component";
     rep.excel_file = "SquareLoop.xlsx";
+    rep.csv_file = "squareloop.csv";
     rep.formula = "L = N^2 * (2 mu0 mu_r w / pi) * (ln(w/a) - 0.774)";
     rep.note = "Sheet uses mu0=1.256637061e-6; emc uses CODATA 1.25663706212e-6 (rel diff ~1e-9). L is linear in mu0 and the bracket is exact, so 1e-6 holds.";
     rep.tolerance = 1e-6;
@@ -395,6 +408,7 @@ emc::validation::CalcReport v_solenoid() {
     rep.name = "Solenoid Inductance";
     rep.domain = "component";
     rep.excel_file = "SolenoidWidget.xlsx";
+    rep.csv_file = "solenoidwidget.csv";
     rep.formula = "L = mu0 * N^2 * pi * r^2 / l";
     rep.note = "Sheet's mu0 (1.256637061e-6) matches emc's exact mu0 to ~3.5e-10, so 1e-6 tolerance is safe; no speed-of-light constant involved.";
     rep.tolerance = 1e-6;
@@ -419,6 +433,7 @@ emc::validation::CalcReport v_toroid() {
     rep.name = "Toroid Inductance";
     rep.domain = "component";
     rep.excel_file = "ToroidWidget.xlsx";
+    rep.csv_file = "toroidwidget.csv";
     rep.formula = "L = (mu0 N^2 h / (2 pi)) * ln(b/a)   [b=outer radius, a=inner radius]";
     rep.note = "Sheet uses mu0=1.256637061e-6 (rounded) vs emc's exact mu0; rel diff ~3.5e-10, negligible. b<a rows give negative L (ln(b/a)<0), which emc reproduces. tol=1e-6.";
     rep.tolerance = 1e-6;
@@ -447,6 +462,7 @@ emc::validation::CalcReport v_via() {
     rep.name = "Via Inductance";
     rep.domain = "component";
     rep.excel_file = "ViaWidget.xlsx";
+    rep.csv_file = "viawidget.csv";
     rep.formula = "L = (mu0 h / 2pi) * (ln(4h/d) - 1)";
     rep.note = "Sheet uses mu0~1.256637061e-6 vs emc's exact mu0; relative gap ~1e-9, well inside tolerance.";
     rep.tolerance = 1e-6;
@@ -472,6 +488,7 @@ emc::validation::CalcReport v_connector_pin() {
     rep.name = "Connector Pin Inductance";
     rep.domain = "component";
     rep.excel_file = "ConnectorPinWidget.xlsx";
+    rep.csv_file = "connectorpinwidget.csv";
     rep.formula = "L=(mu0 l/2pi)(ln(2l/r)-3/4); M=(mu0 l/2pi)(ln(2l/s)-1)";
     rep.note = "Sheet uses mu0=1.256637061e-6 (rounded); emc uses exact 4e-7*pi. "
                "No speed-of-light term, so the ~1e-9 mu0 difference stays well under 1e-6.";
@@ -501,6 +518,7 @@ emc::validation::CalcReport v_trace_resistance() {
     rep.name = "Trace Resistance";
     rep.domain = "component";
     rep.excel_file = "CircuitBoardTraceWidget.xlsx";
+    rep.csv_file = "circuitboardtracewidget.csv";
     rep.formula = "delta=1/sqrt(pi*f*mu0*sigma); A=w*t; perim=2(w+t); "
                   "R/len = (delta>=A/perim ? rho/A : rho/(perim*delta)); R_total=R/len*l; rho=1.72e-8";
     rep.note = "Sheet uses pi=3.1415926, mu0=4*pi*1e-7 and ROUND(...,7) on small per-cm/ohm values; "
@@ -541,6 +559,7 @@ emc::validation::CalcReport v_cyl_conductor() {
     rep.name = "Cylindrical Conductor Resistance";
     rep.domain = "component";
     rep.excel_file = "CylindricalConductorWidget.xlsx";
+    rep.csv_file = "cylindricalconductorwidget.csv";
     rep.formula = "delta=1/sqrt(pi*f*mu_r*mu0/rho); DC: R/m=rho/(pi*(d/2)^2); skin: R/m=rho/(2*pi*(d/2)*delta); R=R/m*l";
     rep.note = "Sheet ROUNDs both outputs to 7 decimals; on micro-ohm magnitudes this rounding sets the error floor (rel err up to ~6e-2), so tolerance is loose. Fed via Material::Custom + custom_resistivity to isolate the formula. Note: ConductorResistanceResult::resistance_per_length is typed emc::units::Impedance (plain ohm), so it is extracted in ohm; the per-length expected column is numerically compared.";
     rep.tolerance = 7e-2;
@@ -578,6 +597,7 @@ emc::validation::CalcReport v_rect_conductor() {
     rep.name = "Rectangular Conductor Resistance";
     rep.domain = "component";
     rep.excel_file = "RectangularConductorWidget.xlsx";
+    rep.csv_file = "rectangularconductorwidget.csv";
     rep.formula = "delta=sqrt(rho/(pi*f*mu0*mu_r)); A=w*t; if delta>=A/(2(w+t)): R/m=rho/A else R/m=rho/(2(w+t)*delta); R=R/m*l";
     rep.note = "Material fed as Custom+custom_resistivity to test the formula. The sheet rounds outputs to 7 decimals and its 'Resistance Per Meter' is x1000 (ohm/km); tolerance covers that display-rounding floor, not a constants difference.";
     rep.tolerance = 5e-4;
@@ -616,6 +636,7 @@ emc::validation::CalcReport v_awg_wire() {
     rep.name = "Standard Gauge Wire Resistance";
     rep.domain = "component";
     rep.excel_file = "StandardGaugeWireWidget.xlsx";
+    rep.csv_file = "standardgaugewirewidget.csv";
     rep.formula = "dm=0.0254*0.005*92^((36-g)/39); A=pi*(dm/2)^2; "
                   "delta=1/sqrt(pi*f*mu_r*mu0/rho); Aeff=2pi*(dm/2)*delta; "
                   "R/m=rho/(delta>=dm/4 ? A : Aeff); R=(R/m)*l";
@@ -659,6 +680,7 @@ emc::validation::CalcReport v_microstrip_line() {
     rep.name = "Microstrip Line (Wheeler)";
     rep.domain = "component";
     rep.excel_file = "MicroStripLineWidget.xlsx";
+    rep.csv_file = "microstriplinewidget.csv";
     rep.formula = "eps_eff=(er+1)/2+((er-1)/2)/sqrt(1+12 h/w); Z0=(120 pi/sqrt(eps_eff))/(w/h+1.393+(2/3)ln(w/h+1.444))";
     rep.note = "Sheet uses PI=3.14 in the W/H>1 impedance branch vs emc's exact pi, giving a ~5e-4 relative offset on Z0; eps_eff is pi-independent.";
     rep.tolerance = 6e-2;   // Wheeler/Hammerstad microstrip variants diverge ~5% at extreme eps_r
@@ -685,6 +707,7 @@ emc::validation::CalcReport v_stripline() {
     rep.name = "Stripline";
     rep.domain = "component";
     rep.excel_file = "StripLineWidget.xlsx";
+    rep.csv_file = "striplinewidget.csv";
     rep.formula = "Z0 = (60/sqrt(eps_r)) * ln( 1.9*(2*h + t) / (0.8*w + t) )";
     rep.note = "No rounded physical constant in the formula (geometry enters only as ratios, so width/height/thickness units cancel and are fed in metres); tolerance 1e-6 against the full-precision Excel formula output.";
     rep.tolerance = 1e-6;
@@ -710,6 +733,7 @@ emc::validation::CalcReport v_narrow_trace() {
     rep.name = "Narrow Trace Over Plane";
     rep.domain = "component";
     rep.excel_file = "NarrowTraceOverPlaneWidget.xlsx";
+    rep.csv_file = "narrowtraceoverplanewidget.csv";
     rep.formula = "L[uH/m]=0.2*acosh(4h/w); C[pF/m]=(2*pi*eps0*eps_r/acosh(4h/w))*1e12; "
                   "delta=1/sqrt(pi*f*mu0*sigma); Aeff=(delta<=wt/(2(w+t)))?2(w+t)*delta:w*t; "
                   "R[mOhm/m]=1000/(sigma*Aeff); Z0=sqrt(1e6*L/C)";
@@ -748,6 +772,7 @@ emc::validation::CalcReport v_wide_trace() {
     rep.name = "Wide Trace Over Plane";
     rep.domain = "component";
     rep.excel_file = "WideTraceOverPlaneWidget.xlsx";
+    rep.csv_file = "widetraceoverplanewidget.csv";
     rep.formula = "L=0.4*pi*h/w [uH/m]; C=eps0*eps_r*(w/h)*1e12 [pF/m]; "
                   "delta=1/sqrt(pi*f*mu0*sigma); Aeff=(delta<=wt/(w+t))?(w+t)*delta:w*t; "
                   "R=1000/(sigma*Aeff) [mOhm/m]; Z0=sqrt(1e6*L/C) [ohm]";
@@ -786,6 +811,7 @@ emc::validation::CalcReport v_wire_over_plane() {
     rep.name = "Wire Over Plane";
     rep.domain = "component";
     rep.excel_file = "WireOverPlaneWidget.xlsx";
+    rep.csv_file = "wireoverplanewidget.csv";
     rep.formula = "L[uH/m]=0.2*acosh(h/a); C[pF/m]=(2*pi*eps0*eps_r/acosh(h/a))*1e12; "
                   "delta=1/sqrt(pi*f*mu0*sigma); Aeff=(delta<=a/2)?2*pi*a*delta:pi*a^2; "
                   "R[mOhm/m]=1000/(sigma*Aeff); Z0=sqrt(1e6*L/C)";
@@ -826,6 +852,7 @@ emc::validation::CalcReport v_wire_pair() {
     rep.name = "Wire Pair";
     rep.domain = "component";
     rep.excel_file = "WirePairWidget.xlsx";
+    rep.csv_file = "wirepairwidget.csv";
     rep.formula = "L[uH/m]=0.4*acosh(s/d); C[pF/m]=(pi*eps0*eps_r/acosh(s/d))*1e12; R[mOhm/m]=2000/(sigma*Aeff); Z0=sqrt(1e6*L/C); Aeff via delta=1/sqrt(pi*f*mu0*sigma)";
     rep.note = "Sheet uses rounded constants (eps0=8.854e-12, pi=3.1415926, mu0=4*pi*1e-7) vs emc's exact eps0/pi/mu0, which perturb C, R (skin depth) and Z0; tolerance 2e-3 absorbs that. sigma fed as Material::Custom so the formula is tested independent of emc's material table.";
     rep.tolerance = 2e-3;
@@ -859,6 +886,7 @@ emc::validation::CalcReport v_microstrip_trace() {
     rep.name = "Microstrip Trace (IPC)";
     rep.domain = "component";
     rep.excel_file = "MicrostripTraceWidget.xlsx";
+    rep.csv_file = "microstriptracewidget.csv";
     rep.formula = "Z0=87 ln(5.98 h/(0.8 w+t))/sqrt(eps_r+1.41); C0=0.67(eps_r+1.41)/ln(...)/2.54 pF/cm; Tpd=C0term*Z0/2.54 ps/cm";
     rep.note = "Pure empirical constants (no speed-of-light); emc and Excel evaluate the identical closed form, so 1e-6 is the appropriate gate.";
     rep.tolerance = 1e-6;
@@ -888,6 +916,7 @@ emc::validation::CalcReport v_stripline_trace() {
     rep.name = "Stripline Trace (IPC)";
     rep.domain = "component";
     rep.excel_file = "StriplineTraceWidget.xlsx";
+    rep.csv_file = "striplinetracewidget.csv";
     rep.formula = "Z0=60*ln(4*(2H+T)/(0.67*pi*(0.8W+T)))/sqrt(eps_r); Tpd=84.75*sqrt(eps_r) ps/inch; C0=Tpd/Z0";
     rep.note = "Sheet uses pi~3.14159 inside the ln argument vs emc's exact pi; the 84.75 ps/inch constant embeds c equally in both, so the relative gap is tiny.";
     rep.tolerance = 1e-4;
@@ -919,6 +948,7 @@ emc::validation::CalcReport v_dual_stripline() {
     rep.name = "Dual Stripline Trace";
     rep.domain = "component";
     rep.excel_file = "DualStriplineTraceWidget.xlsx";
+    rep.csv_file = "dualstriplinetracewidget.csv";
     rep.formula = "Z0=0.5*(60 ln(8H/(0.67 pi(0.8W+T)))/sqrt(eps)+60 ln(8(H+C)/(0.67 pi(0.8W+T)))/sqrt(eps)); Tpd=84.75 sqrt(eps) ps/in; C0=Tpd/Z0 pF/in";
     rep.note = "Sheet uses pi=3.14159; emc uses exact pi, so Z0 (and the C0 that divides by it) carry a ~3.5e-7 relative offset. Tpd has no pi and is exact.";
     rep.tolerance = 1e-6;   // no c involved; floor set only by the 3.14159-vs-pi constant
@@ -949,6 +979,7 @@ emc::validation::CalcReport v_dipole() {
     rep.name = "Dipole Antenna Near-Field";
     rep.domain = "basic";
     rep.excel_file = "DipoleAntennaWidget.xlsx";
+    rep.csv_file = "dipoleantennawidget.csv";
     rep.formula = "Er=60*(I0*l/R^2)*cos(th)*sqrt(1+(c/(2pi f R))^2); "
                   "Etheta=30*(I0*l/R)*sin(th)*sqrt((1/R)^2+((2pi f/c)-(c/(2pi f R^2)))^2); "
                   "Hphi=(f/(2c))*(I0*l/R)*sin(th)*sqrt(1+(c/(2pi f R))^2)";
@@ -988,6 +1019,7 @@ emc::validation::CalcReport v_loop_antenna() {
     rep.name = "Loop Antenna Near-Field";
     rep.domain = "basic";
     rep.excel_file = "LoopAntennaWidget.xlsx";
+    rep.csv_file = "loopantennawidget.csv";
     rep.formula = "H_r=(f/c)(I0 A/R^2)cos(th)sqrt(1+(c/(2 pi f R))^2); "
                   "H_theta=(f/2c)(I0 A/R)sin(th)sqrt((1/R)^2+((2 pi f/c)-(c/(2 pi f R^2)))^2); "
                   "E_phi=120(pi f/c)^2(I0 A/R)sin(th)sqrt(1+(c/(2 pi f R))^2)";
@@ -1027,6 +1059,7 @@ emc::validation::CalcReport v_far_field() {
     rep.name = "Far-Field Criteria";
     rep.domain = "basic";
     rep.excel_file = "FarFieldCriteriaWidget.xlsx";
+    rep.csv_file = "farfieldcriteriawidget.csv";
     rep.formula = "lambda=c/f; if D>lambda/10: reactive=0.62*sqrt(D^3/lambda), radiating=2*D^2/lambda; else reactive=lambda/50, radiating=lambda";
     rep.note = "Excel uses c=3e8 m/s vs emc's exact c=299792458 m/s, so c-derived outputs differ by ~7e-4.";
     rep.tolerance = 2e-3;
@@ -1053,6 +1086,7 @@ emc::validation::CalcReport v_esd() {
     rep.name = "ESD Coupling Level";
     rep.domain = "prediction";
     rep.excel_file = "ESDCouplingLevelWidget.xlsx";
+    rep.csv_file = "esdcouplinglevelwidget.csv";
     rep.formula = "Vind = (mu0*h)/(2*pi) * ln((r+d)/r) * (Ipeak/tr)";
     rep.note = "Excel uses mu0 = 1.256637061e-6 H/m; emc uses the codata mu0. No speed-of-light constant, so 1e-6 is achievable.";
     rep.tolerance = 1e-6;
@@ -1083,6 +1117,7 @@ emc::validation::CalcReport v_lightning() {
     rep.name = "Lightning Coupling Level";
     rep.domain = "prediction";
     rep.excel_file = "LightningCouplingLevelWidget.xlsx";
+    rep.csv_file = "lightningcouplinglevelwidget.csv";
     rep.formula = "Vind = (mu0*h)/(2*pi) * ln((r+d)/r) * di_dt";
     rep.note = "Sheet uses rounded mu0=1.256637061e-6 vs emc's exact mu0; the resulting"
                " difference is < 5e-10 relative, well within tolerance.";
@@ -1110,6 +1145,7 @@ emc::validation::CalcReport v_friis() {
     rep.name = "Friis Link Budget";
     rep.domain = "prediction";
     rep.excel_file = "FriisTransmissionWidget.xlsx";
+    rep.csv_file = "friistransmissionwidget.csv";
     rep.formula = "Prx = 30 + 10*log10( Ptx * 10^(Gtx/10) * 10^(Grx/10) * (c/(4*pi*R*f))^2 )";
     rep.note = "Sheet uses c=3e8 (vs emc's exact c); the squared c term sets the relative-error floor (~4e-5).";
     rep.tolerance = 2e-3;   // dominated by c=3e8 vs exact c inside (c/(4 pi R f))^2
@@ -1141,6 +1177,7 @@ emc::validation::CalcReport v_rf_field() {
     rep.name = "RF Far-Field from EIRP";
     rep.domain = "prediction";
     rep.excel_file = "EFieldFormulaWidget.xlsx";
+    rep.csv_file = "efieldformulawidget.csv";
     rep.formula = "Pt=10^((dBm-30)/10) W; G=10^(dBi/10); E=sqrt(30*Pt*G)/d; H=E/(120*pi); P_D=E*H";
     // Math is exact (emc uses 120*pi with full-precision pi, matching =120*PI()); the
     // floor is set by the Excel cache, which stores the largest expected magnitudes
@@ -1171,6 +1208,7 @@ emc::validation::CalcReport v_aperture() {
     rep.name = "Aperture Absorption Loss";
     rep.domain = "shielding";
     rep.excel_file = "ApertureWidget.xlsx";
+    rep.csv_file = "aperturewidget.csv";
     rep.formula = "Round: AL = 32 * depth / diameter; Slot: AL = 27.3 * depth / width (lengths in inches)";
     rep.note = "Pure empirical constants (27.3 / 32), no speed-of-light term; lengths fed in metres and converted to inches inside emc.";
     rep.tolerance = 1e-6;
@@ -1209,6 +1247,7 @@ emc::validation::CalcReport v_slot() {
     rep.name = "Slot Shielding Effectiveness";
     rep.domain = "shielding";
     rep.excel_file = "SlotWidget.xlsx";
+    rep.csv_file = "slotwidget.csv";
     rep.formula = "lambda = c/f; SE = 20*log10( lambda / (2*length) )  [dB, may be negative]";
     rep.note = "Sheet uses c=3e8 m/s vs emc's exact c, a ~0.006 dB absolute SE offset; "
                "amplified to ~1.7e-2 relative on rows where SE ~= 0 dB, hence tol 2e-2.";
@@ -1232,6 +1271,7 @@ emc::validation::CalcReport v_near_field_se() {
     rep.name = "Near-Field Shielding Effectiveness";
     rep.domain = "shielding";
     rep.excel_file = "NearFieldShieldingEffectivenessWidget.xlsx";
+    rep.csv_file = "nearfieldshieldingeffectivenesswidget.csv";
     rep.formula = "Zw=1/(2*pi*f*eps0*r) [E-field]; Ns=sqrt(2*pi^2*4e-7*mu_r*f/sigma); delta=1/sqrt(pi^2*4e-7*mu_r*sigma*f); RL=20*log10(Zw/(4*Ns)); AL=8.7*(t/delta); SE=RL+AL";
     rep.note = "Electric (high-Z) near field. Sheet's Zw uses a rounded eps0=8.85e-12 while emc uses CODATA eps0~8.854187e-12; this adds ~0.004 dB to RL (relative error <~3e-5 on the >160 dB losses). AL uses the exact 8.7 and 4e-7 constants, so it matches to ~1e-6.";
     rep.tolerance = 1e-4;
@@ -1265,6 +1305,7 @@ emc::validation::CalcReport v_plane_wave_se() {
     rep.name = "Plane-Wave Shielding Effectiveness";
     rep.domain = "shielding";
     rep.excel_file = "PlaneWaveShieldingEffectivenessWidget.xlsx";
+    rep.csv_file = "planewaveshieldingeffectivenesswidget.csv";
     rep.formula = "Ns=sqrt(2*pi^2*4e-7*mu_r*f/sigma); RL=20*log10(377/(4*Ns)); delta=1/sqrt(pi^2*4e-7*mu_r*sigma*f); AL=8.7*(t/delta); SE=AL+RL";
     rep.note = "Wave impedance fixed at 377 ohm (no speed-of-light dependence); Excel and emc both use full-precision pi and mu0=4e-7*pi, so 1e-6 holds.";
     rep.tolerance = 1e-6;
@@ -1292,6 +1333,7 @@ emc::validation::CalcReport v_rect_cavity() {
     rep.name = "Rectangular Cavity Modes";
     rep.domain = "shielding";
     rep.excel_file = "RectangularEnclosureWidget.xlsx";
+    rep.csv_file = "rectangularenclosurewidget.csv";
     rep.formula = "f_mnp = (c / (2*sqrt(eps_r))) * sqrt((m/L)^2 + (n/W)^2 + (p/H)^2)";
     rep.note = "Sheet uses c/2 = 1.5e8 (c ~= 3e8); emc uses the exact c = 299792458 m/s, "
                "so every mode frequency differs by the ~6.9e-4 relative gap between the two constants. "
@@ -1324,6 +1366,7 @@ emc::validation::CalcReport v_cyl_cavity() {
     rep.name = "Cylindrical Cavity Modes";
     rep.domain = "shielding";
     rep.excel_file = "CylindricalEnclosureWidget.xlsx";
+    rep.csv_file = "cylindricalenclosurewidget.csv";
     rep.formula = "f_ef111 = (c/(2pi*sqrt(eps_r))) * sqrt((1.841/r)^2 + (pi/L)^2)";
     rep.note = "The sheet reports only the ef111 (TE111) mode, so emc's ef111 mode is compared "
                "(not dominant(), which is the global minimum and differs for flat cavities). "
@@ -1356,6 +1399,7 @@ emc::validation::CalcReport v_board_planes() {
     rep.name = "Circuit Board Plane Modes";
     rep.domain = "shielding";
     rep.excel_file = "CircuitBoardPlanesWidget.xlsx";
+    rep.csv_file = "circuitboardplaneswidget.csv";
     rep.formula = "f_mn = (c/(2*sqrt(eps_r))) * sqrt((m/L)^2 + (n/W)^2); dominant = min over 12 modes";
     rep.note = "Sheet uses c/2 ~ 1.5e8 (c ~ 3e8) while emc uses exact c, so the floor is ~2e-3.";
     rep.tolerance = 2e-3;
@@ -1389,6 +1433,7 @@ emc::validation::CalcReport v_braid() {
     rep.name = "Braid Optical Coverage";
     rep.domain = "cabling";
     rep.excel_file = "CableBraidOpticalCoverageWidget.xlsx";
+    rep.csv_file = "cablebraidopticalcoveragewidget.csv";
     rep.formula = "theta=atan(2*pi*(D+2d)*P/C); F=P*N*d/sin(theta); OC=2F-F^2 (fraction)";
     rep.note = "No physical constants in the formula (pure trig/algebra), so 1e-6 "
                "is comfortable; max observed rel-error vs the sheet is ~2e-10. "
@@ -1429,6 +1474,7 @@ emc::validation::CalcReport v_crosstalk() {
     rep.name = "Crosstalk";
     rep.domain = "cabling";
     rep.excel_file = "KrosstalkCalculatorWidget.xlsx";
+    rep.csv_file = "krosstalkcalculatorwidget.csv";
     rep.formula =
         "V_NE=20log10(2pi f[(RNE/(RNE+RFE))(Lm/(RS+RL))+(RNE RFE/(RNE+RFE))(RL Cm/(RS+RL))]); "
         "V_FE uses -RFE term; V_FE clamped to -200 dB when arg<=0";
@@ -1470,6 +1516,7 @@ emc::validation::CalcReport v_microstrip_current() {
     rep.name = "Microstrip Ground Return Current";
     rep.domain = "grounding";
     rep.excel_file = "MicrostripLineCurrentDistributionWidget.xlsx";
+    rep.csv_file = "microstriplinecurrentdistributionwidget.csv";
     rep.formula = "J = (I0 / (pi * w)) * 1 / (1 + (x / h)^2)";
     rep.note = "Closed form with no rounded physical constants (no c); exact match expected.";
     rep.tolerance = 1e-6;
@@ -1502,6 +1549,7 @@ emc::validation::CalcReport v_ferrite() {
     rep.name = "Ferrite Toroid Impedance";
     rep.domain = "filtering";
     rep.excel_file = "FerriteToroidWidget.xlsx";
+    rep.csv_file = "ferritetoroidwidget.csv";
     rep.formula = "L=(mu0 N^2 h/2pi) ln(b/a); X=2pi f mu_r' L; R=2pi f mu_r'' L; |Z|=sqrt(X^2+R^2)";
     rep.note = "Sheet uses mu0=4*pi*1e-7 (=1.2566370614e-6); emc uses CODATA mu0 (=1.25663706212e-6), "
                "a ~6e-9 relative offset folded into every output. Most sheet rows have b<a (negative L), "
@@ -1541,6 +1589,7 @@ emc::validation::CalcReport v_noise_figure() {
     rep.name = "Cascade Noise Figure";
     rep.domain = "testing";
     rep.excel_file = "NoiseFigureofanRFReceiverWidget.xlsx";
+    rep.csv_file = "noisefigureofanrfreceiverwidget.csv";
     rep.formula = "F=10^(N1/10)+(10^(N2/10)-1)/10^(G1/10)+(10^(N3/10)-1)/(10^(G1/10)*10^(G2/10)); NF=10*log10(F); Gtot=G1+G2+G3";
     rep.note = "Friis cascade noise figure; pure log10/sum math with no rounded physical constant, so tolerance is 1e-6.";
     rep.tolerance = 1e-6;

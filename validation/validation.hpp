@@ -33,6 +33,13 @@ struct Comparison {
     [[nodiscard]] bool within(double rel_tol, double abs_floor) const {
         return std::abs(computed - expected) <= abs_floor || rel_error() <= rel_tol;
     }
+    // Like rel_error, but the denominator is floored at abs_floor so a near-zero
+    // expected value cannot inflate it. Used for the headline / summary metrics.
+    [[nodiscard]] double display_error(double abs_floor) const {
+        const double diff  = std::abs(computed - expected);
+        const double denom = std::max(std::abs(expected), abs_floor);
+        return denom > 1e-300 ? diff / denom : diff;
+    }
 };
 
 // One reference row: the inputs (as a human-readable label) and every output
@@ -46,7 +53,8 @@ struct Case {
 struct CalcReport {
     std::string name;        // "Coaxial Line"
     std::string domain;      // "component"
-    std::string excel_file;  // "CoaxialLineWidget.xlsx"
+    std::string excel_file;  // "CoaxialLineWidget.xlsx" (provenance)
+    std::string csv_file;    // "coaxial_line.csv" (the repo reference file)
     std::string formula;     // human-readable formula(s)
     std::string note;        // optional caveat (e.g. constants difference)
     double      tolerance = 1e-6;   // pass gate: relative error must be <= this
@@ -64,6 +72,18 @@ struct CalcReport {
         std::size_t n = 0;
         for (const auto& c : cases)
             for (const auto& o : c.outputs) { sum += o.rel_error(); ++n; }
+        return n ? sum / static_cast<double>(n) : 0.0;
+    }
+    [[nodiscard]] double display_max() const {
+        double m = 0.0;
+        for (const auto& c : cases)
+            for (const auto& o : c.outputs) m = std::max(m, o.display_error(abs_floor));
+        return m;
+    }
+    [[nodiscard]] double display_avg() const {
+        double sum = 0.0; std::size_t n = 0;
+        for (const auto& c : cases)
+            for (const auto& o : c.outputs) { sum += o.display_error(abs_floor); ++n; }
         return n ? sum / static_cast<double>(n) : 0.0;
     }
     [[nodiscard]] std::size_t comparison_count() const {
