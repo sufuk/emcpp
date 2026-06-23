@@ -54,9 +54,12 @@ std::string sci(double v) {
 }
 
 std::string pct(double v) {
+    const double p = v * 100.0;
+    if (p == 0.0) return "0%";
+    if (p < 0.01) return "<0.01%";   // below the rounding floor
     char b[40];
-    std::snprintf(b, sizeof b, "%.3g", v * 100.0);
-    return std::string{b} + "%";
+    std::snprintf(b, sizeof b, "%.2f%%", p);   // 2 decimals, e.g. 6.31% / 0.07%
+    return std::string{b};
 }
 
 // Error display: scientific form plus a percentage, e.g. "6.31e-02 (6.31%)".
