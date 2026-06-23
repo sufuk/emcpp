@@ -113,7 +113,7 @@ h2{font-size:16px;margin:0 0 12px}
 table{width:100%;border-collapse:collapse;background:var(--card);
 border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:6px 0 18px}
 th,td{padding:8px 11px;text-align:left;border-bottom:1px solid var(--line);font-size:13px}
-th{color:var(--mut);font-weight:600;background:#11161d;position:sticky;top:54px}
+th{color:var(--mut);font-weight:600;background:#11161d}
 td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;
 font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
 tr:last-child td{border-bottom:none}
@@ -135,9 +135,9 @@ a.lnk{color:var(--accent)}
 
     // ---- header ----
     o << "<header><h1>emc &mdash; validation vs Excel reference</h1><div class=\"chips\">";
-    o << "<div class=\"chip\"><b>" << reports.size() << "</b> hesaplayıcı</div>";
-    o << "<div class=\"chip\"><b>" << total_cmp << "</b> karşılaştırma</div>";
-    o << "<div class=\"chip\">en kötü hata <b>" << sci(overall_max) << "</b></div>";
+    o << "<div class=\"chip\"><b>" << reports.size() << "</b> calculators</div>";
+    o << "<div class=\"chip\"><b>" << total_cmp << "</b> comparisons</div>";
+    o << "<div class=\"chip\">worst error <b>" << sci(overall_max) << "</b></div>";
     o << "<div class=\"chip\">"
       << (all_pass ? "<span class=\"pill ok\">ALL PASS</span>" : "<span class=\"pill bad\">FAIL</span>")
       << "</div></div></header>";
@@ -145,10 +145,10 @@ a.lnk{color:var(--accent)}
     o << "<div class=\"app\">";
 
     // ---- sidebar ----
-    o << "<nav class=\"side\"><input id=\"q\" placeholder=\"hesaplayıcı ara...\" "
+    o << "<nav class=\"side\"><input id=\"q\" placeholder=\"search calculators...\" "
          "oninput=\"flt(this.value)\">";
-    o << "<a data-id=\"overview\" data-c=\"overview genel\" class=\"active\" onclick=\"show('overview')\">"
-         "<span class=\"dot\"></span>Genel bakış</a>";
+    o << "<a data-id=\"overview\" data-c=\"overview\" class=\"active\" onclick=\"show('overview')\">"
+         "<span class=\"dot\"></span>Overview</a>";
     for (const auto& dom : domains) {
         bool grp = false;
         for (std::size_t i = 0; i < reports.size(); ++i) {
@@ -163,13 +163,13 @@ a.lnk{color:var(--accent)}
     o << "</nav><main>";
 
     // ---- overview section ----
-    o << "<section id=\"overview\"><h2>Genel bakış</h2>"
-         "<p class=\"dim\">Her hesaplayıcı, güvenilen Excel sayfalarından çıkarılmış girdi vektörleriyle "
-         "çalıştırılır; emc'nin çıktısı sayfanın formül sonucuyla (ground truth) karşılaştırılır. "
-         "Soldaki listeden bir hesaplayıcı seç. \"max hata\" sıfıra yakın değerlerde şişmesin diye "
-         "tabanlanmıştır.</p>";
-    o << "<table><thead><tr><th>Hesaplayıcı</th><th>Referans CSV</th><th class=\"n\">karş.</th>"
-         "<th class=\"n\">max hata</th><th class=\"n\">tol</th><th>durum</th></tr></thead><tbody>";
+    o << "<section id=\"overview\"><h2>Overview</h2>"
+         "<p class=\"dim\">Each calculator is run over the input vectors extracted from the trusted Excel "
+         "sheets; emc's output is compared against the sheet's own formula result (ground truth). "
+         "Pick a calculator from the list on the left. The \"max error\" is floored so a value "
+         "crossing zero (or the sheet's own rounding) cannot inflate it.</p>";
+    o << "<table><thead><tr><th>Calculator</th><th>Reference CSV</th><th class=\"n\">count</th>"
+         "<th class=\"n\">max error</th><th class=\"n\">tol</th><th>status</th></tr></thead><tbody>";
     for (const auto& dom : domains) {
         bool grp = false;
         for (std::size_t i = 0; i < reports.size(); ++i) {
@@ -196,15 +196,15 @@ a.lnk{color:var(--accent)}
           << "</h2><span class=\"tag\">" << esc(r.domain) << "</span>"
           << (r.passed() ? "<span class=\"pill ok\">PASS</span>" : "<span class=\"pill bad\">FAIL</span>")
           << "</div>";
-        o << "<div class=\"meta\">Referans: <code>tests/reference/" << esc(r.csv_file) << "</code>"
-          << " &middot; " << r.comparison_count() << " karşılaştırma"
-          << " &middot; max hata " << sci(r.display_max())
-          << " &middot; ort " << sci(r.display_avg())
-          << " &middot; tolerans " << sci(r.tolerance) << "</div>";
+        o << "<div class=\"meta\">Reference: <code>tests/reference/" << esc(r.csv_file) << "</code>"
+          << " &middot; " << r.comparison_count() << " comparisons"
+          << " &middot; max error " << sci(r.display_max())
+          << " &middot; avg " << sci(r.display_avg())
+          << " &middot; tolerance " << sci(r.tolerance) << "</div>";
         o << "<div class=\"formula\">" << esc(r.formula) << "</div>";
         if (!r.note.empty()) o << "<div class=\"note\">" << esc(r.note) << "</div>";
-        o << "<table><thead><tr><th>Girdi</th><th>Büyüklük</th><th class=\"n\">emc</th>"
-             "<th class=\"n\">Excel</th><th class=\"n\">birim</th><th class=\"n\">hata</th></tr></thead><tbody>";
+        o << "<table><thead><tr><th>Inputs</th><th>Quantity</th><th class=\"n\">emc</th>"
+             "<th class=\"n\">Excel</th><th class=\"n\">unit</th><th class=\"n\">error</th></tr></thead><tbody>";
         for (const auto& c : r.cases) {
             bool first = true;
             for (const auto& cmp : c.outputs) {
