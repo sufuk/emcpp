@@ -1,0 +1,58 @@
+site_name: emcpp
+site_description: A modern C++23 library of closed-form EMC (electromagnetic-compatibility) calculators
+site_author: Semih Ufuk Güler
+repo_url: https://github.com/sufuk/emcpp
+repo_name: sufuk/emcpp
+edit_uri: edit/main/docs/
+copyright: Copyright &copy; 2026 Semih Ufuk Güler — Apache-2.0
+
+theme:
+  name: material
+  language: en
+  icon:
+    repo: fontawesome/brands/github
+  palette:
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue
+      accent: light blue
+      toggle: { icon: material/weather-night, name: Switch to light }
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue
+      accent: blue
+      toggle: { icon: material/weather-sunny, name: Switch to dark }
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.tracking
+    - navigation.indexes
+    - toc.follow
+    - content.code.copy
+    - content.code.annotate
+    - search.suggest
+    - search.highlight
+
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - Architecture: architecture.md
+  - Calculator catalog: calculators.md
+  - Validation: validation.md
+  - Development & CI: development.md
+  - API reference: api/index.html
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc: { permalink: true }
+  - pymdownx.highlight: { anchor_linenums: true }
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.details
+  - pymdownx.tabbed: { alternate_style: true }
+
+plugins:
+  - search
