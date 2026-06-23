@@ -108,6 +108,11 @@ generate_export_header(emc
         NO_EXPORT_MACRO_NAME EMC_LOCAL
         EXPORT_FILE_NAME ${CMAKE_CURRENT_BINARY_DIR}/include/emc/export.hpp)
 
+# Shared validation core (Excel reference test + HTML report). Added before tests/
+# because emc_tests links emc_validation.
+if (EMC_BUILD_TESTS OR EMC_BUILD_EXAMPLES)
+    add_subdirectory(validation)
+endif ()
 if (EMC_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
