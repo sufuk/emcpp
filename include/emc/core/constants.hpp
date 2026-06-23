@@ -2,7 +2,7 @@
 #pragma once
 
 #include <numbers>     // std::numbers::pi gives one full-precision pi for the whole program
-#include <cmath>       // std::sqrt is constexpr in C++23, so we can use it in the static_asserts below
+#include <cmath>       // std::sqrt etc. for runtime math in headers that include this one
 
 #include <mp-units/systems/si.h>
 #include <mp-units/systems/isq.h>
@@ -77,17 +77,22 @@ using namespace mp_units;
 // Edit one literal above into an inconsistent set and the build fails instead of shipping
 // a silently wrong constant.
 
-// 1) c == 1 / sqrt(eps0 * mu0)
-inline constexpr double c_check =
-    1.0 / std::sqrt((eps0 * mu0).numerical_value_in(si::farad * si::henry
-                                                    / (si::metre * si::metre)));
-static_assert(close(c_check, c.numerical_value_in(si::metre / si::second)),
+// Both identities involve a square root. A *compile-time* sqrt needs a constexpr
+// sqrt, which neither std::sqrt nor mp_units::sqrt provides under libc++ (both
+// bottom out in the C sqrt, which is constexpr only as a libstdc++/GCC extension).
+// So square each identity — multiplication and division are constexpr everywhere —
+// and assert the equivalent product form.
+
+// 1) c == 1 / sqrt(eps0 * mu0)   <=>   eps0 * mu0 == 1 / c^2   (unit: s^2/m^2)
+static_assert(close((eps0 * mu0).numerical_value_in(si::second * si::second
+                                                    / (si::metre * si::metre)),
+                    (1.0 / (c * c)).numerical_value_in(si::second * si::second
+                                                       / (si::metre * si::metre))),
               "c must equal 1/sqrt(eps0*mu0)");
 
-// 2) z0 == sqrt(mu0 / eps0)
-inline constexpr double z0_check =
-    std::sqrt((mu0 / eps0).numerical_value_in(si::ohm * si::ohm));
-static_assert(close(z0_check, z0.numerical_value_in(si::ohm)),
+// 2) z0 == sqrt(mu0 / eps0)   <=>   z0^2 == mu0 / eps0   (unit: ohm^2)
+static_assert(close((z0 * z0).numerical_value_in(si::ohm * si::ohm),
+                    (mu0 / eps0).numerical_value_in(si::ohm * si::ohm)),
               "z0 must equal sqrt(mu0/eps0)");
 
 // 3) z0 == mu0 * c   (the same impedance, expressed a different way)

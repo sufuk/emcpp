@@ -1,11 +1,21 @@
 # cmake/Dependencies.cmake
 include(FetchContent)
 
+# mp-units probes std::format support at configure time with a try_compile that
+# honors the *global* C++ standard (CMP0067). This project otherwise sets the
+# standard only per target (cxx_std_23), so the probe would compile at the
+# compiler default (C++17) where __cpp_lib_format is undefined and the check
+# fails. Pin the standard globally so the probe — and every dependency check —
+# sees C++23.
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 find_package(mp-units CONFIG QUIET)
 if(NOT mp-units_FOUND)
     # These options are read by mp-units' own CMakeLists, so set them BEFORE MakeAvailable:
     set(MP_UNITS_API_CONTRACTS NONE CACHE STRING "" FORCE)   # no gsl-lite / ms-gsl transitive dep
     set(MP_UNITS_BUILD_CXX_MODULES OFF CACHE BOOL "" FORCE)  # headers, not C++20 modules
+    set(MP_UNITS_API_STD_FORMAT ON CACHE STRING "" FORCE)    # use std::format (C++23); avoids the fmt dependency
     FetchContent_Declare(mp-units
         GIT_REPOSITORY https://github.com/mpusz/mp-units.git
         GIT_TAG        v2.5.0          # pinned for reproducibility
