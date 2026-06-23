@@ -1,0 +1,36 @@
+# Doxyfile for emcpp — generates the C++ API reference published under /api.
+# Run: doxygen Doxyfile   (HTML lands in build/doxygen/html)
+PROJECT_NAME           = emcpp
+PROJECT_BRIEF          = "C++23 EMC engineering calculators"
+OUTPUT_DIRECTORY       = build/doxygen
+GENERATE_LATEX         = NO
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+
+INPUT                  = include README.md
+USE_MDFILE_AS_MAINPAGE = README.md
+FILE_PATTERNS          = *.hpp *.h *.md
+RECURSIVE              = YES
+
+EXTRACT_ALL            = YES
+EXTRACT_STATIC         = YES
+EXTRACT_PRIVATE        = NO
+JAVADOC_AUTOBRIEF      = YES
+QT_AUTOBRIEF           = YES
+HIDE_UNDOC_MEMBERS     = NO
+SORT_MEMBER_DOCS       = NO
+
+# C++23 / mp-units lean on macros and concepts; keep parsing tolerant.
+MACRO_EXPANSION        = YES
+EXPAND_ONLY_PREDEF     = NO
+SKIP_FUNCTION_MACROS   = YES
+BUILTIN_STL_SUPPORT    = YES
+WARN_IF_UNDOCUMENTED   = NO
+QUIET                  = YES
+
+GENERATE_TREEVIEW      = YES
+DISABLE_INDEX          = NO
+FULL_SIDEBAR           = NO
+HTML_COLORSTYLE        = LIGHT
+SOURCE_BROWSER         = YES
+# doxygen-awesome-css is injected by the docs workflow (HTML_EXTRA_STYLESHEET).
