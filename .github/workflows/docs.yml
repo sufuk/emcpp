@@ -44,6 +44,7 @@ jobs:
         run: |
           set -euxo pipefail
           git clone --depth 1 https://github.com/jothepro/doxygen-awesome-css.git
+          mkdir -p build/doxygen   # Doxygen's mkdir is single-level; the parent dir must exist
           { cat Doxyfile;
             echo "HTML_EXTRA_STYLESHEET = doxygen-awesome-css/doxygen-awesome.css doxygen-awesome-css/doxygen-awesome-sidebar-only.css";
           } | doxygen -
