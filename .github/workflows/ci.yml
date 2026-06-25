@@ -46,16 +46,12 @@ jobs:
   build-test:
     name: ${{ matrix.compiler }} / ${{ matrix.build_type }}
     runs-on: ubuntu-24.04
-    # clang-18 (libc++) support is still being ported, so its CI cell is commented
-    # out of the matrix below for now. The continue-on-error guard is kept so that
-    # uncommenting `clang-18` in the matrix brings it back as NON-blocking.
-    continue-on-error: ${{ matrix.compiler == 'clang-18' }}
     strategy:
       fail-fast: false
       matrix:
         compiler:
           - gcc-14
-          # - clang-18    # TODO: re-enable once the clang/libc++ build is clean
+          - clang-18    # builds against libc++ (-stdlib=libc++); green Debug + Release
         build_type: [Debug, Release]
     steps:
       - name: Checkout

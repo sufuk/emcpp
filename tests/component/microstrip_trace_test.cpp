@@ -16,6 +16,7 @@
 
 #include <emc/component/microstrip_trace.hpp>
 #include "support/approx.hpp"
+#include "support/constexpr_smoke.hpp"
 
 #include <mp-units/systems/si.h>
 
@@ -106,10 +107,11 @@ TEST_CASE("microstrip validation", "[component][microstrip][validate]") {
     }
 }
 
-// (d) CONSTEXPR-FRIENDLY smoke test: the forward core is pure closed-form (compile-time guard).
-static_assert([] {
+// (d) CONSTEXPR-FRIENDLY smoke test: the forward core is pure closed-form. A
+// compile-time guard on gcc/libstdc++; a runtime check on libc++ (no constexpr cmath).
+EMC_CONSTEXPR_SMOKE(([] {
     const double H = 18.65392418, T = 11.15918402, W = 15.00320319, e = 5.0;
     const double ln = std::log(5.98 * H / (0.8 * W + T));
     const double z0 = 87.0 * ln / std::sqrt(e + 1.41);
     return z0 > 54.0 && z0 < 54.1;          // matches the known value above
-}(), "microstrip forward core must be constexpr-evaluable and ~54.02 ohm");
+}()), "microstrip forward core must be ~54.02 ohm");

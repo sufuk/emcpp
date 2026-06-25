@@ -21,6 +21,7 @@
 
 #include <emc/component/embedded_microstrip_trace.hpp>
 #include "support/approx.hpp"
+#include "support/constexpr_smoke.hpp"
 
 #include <cmath>
 
@@ -95,10 +96,10 @@ TEST_CASE("embedded microstrip validation", "[component][embedded][validate]") {
 }
 
 // (d) CONSTEXPR-FRIENDLY smoke test: the forward core is pure closed-form
-//     (geometry in metres). Compile-time guard on the headline known value.
-static_assert([] {
+//     (geometry in metres). Compile-time on gcc/libstdc++; runtime on libc++.
+EMC_CONSTEXPR_SMOKE(([] {
     const double h1 = 0.042, H = 0.00455, T = 0.0238, W = 0.001, e = 11.41627113;
     const double z0 = 87.0 * std::log(5.98 * H / (0.8 * W + T))
                       * (1.0 - (h1 - H - T) / 0.1) / std::sqrt(e + 1.41);
     return z0 > 2.11 && z0 < 2.12;          // matches the known value above
-}(), "embedded core must be constexpr-evaluable and ~2.11 ohm");
+}()), "embedded core must be ~2.11 ohm");

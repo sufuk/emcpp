@@ -8,9 +8,8 @@
 # (workflow_dispatch is allowed for manual re-runs against an existing tag.)
 #
 # Rigor, in strict order -- a broken or mistagged release NEVER ships:
-#   1. test    : full build + ctest on the tagged commit with gcc-14
-#                (Release, static -- the configuration that ships). clang-18 is
-#                commented out of the gate while its libc++ port is in progress.
+#   1. test    : full build + ctest on the tagged commit with gcc-14 AND
+#                clang-18/libc++ (Release, static -- the configuration that ships).
 #                fail-fast: one red cell aborts the whole release.
 #   2. package : verify the tag matches project() VERSION, install emc into a
 #                staging prefix (which bundles mp-units -- see below), run a
@@ -66,16 +65,22 @@ jobs:
             cxx: g++-14
             # apt package list -- gcc-14 and g++-14 are both real packages.
             pkgs: gcc-14 g++-14
-          # clang-18 is commented out of the release gate while clang/libc++
-          # support is being ported (mirrors ci.yml). When re-enabling, note it
-          # also needs -stdlib=libc++ for std::expected (see ci.yml's clang path).
-          # - name: clang-18 (Release)
-          #   cc: clang-18
-          #   cxx: clang++-18
-          #   pkgs: clang-18
+            cxxflags: ""
+            ldflags: ""
+          # clang-18 builds against libc++ (its libstdc++ pairing lacks std::expected);
+          # CMake folds CXXFLAGS/LDFLAGS into the build, so -stdlib=libc++ applies to
+          # both compile and link.
+          - name: clang-18 (Release)
+            cc: clang-18
+            cxx: clang++-18
+            pkgs: clang-18 libc++-18-dev libc++abi-18-dev
+            cxxflags: "-stdlib=libc++"
+            ldflags: "-stdlib=libc++"
     env:
       CC: ${{ matrix.cc }}
       CXX: ${{ matrix.cxx }}
+      CXXFLAGS: ${{ matrix.cxxflags }}
+      LDFLAGS: ${{ matrix.ldflags }}
     steps:
       - name: Checkout the tag
         uses: actions/checkout@v4

@@ -17,6 +17,7 @@
 #include <emc/component/stripline_trace.hpp>
 #include <emc/core/constants.hpp>
 #include "support/approx.hpp"
+#include "support/constexpr_smoke.hpp"
 
 #include <mp-units/systems/si.h>
 
@@ -109,10 +110,11 @@ TEST_CASE("stripline validation", "[component][stripline][validate]") {
     }
 }
 
-// (d) CONSTEXPR smoke: the forward core is a pure closed form using the shared full-precision pi.
-static_assert([] {
+// (d) CONSTEXPR smoke: the forward core is a pure closed form using the shared
+// full-precision pi. Compile-time on gcc/libstdc++; runtime on libc++.
+EMC_CONSTEXPR_SMOKE(([] {
     const double H = 81.0, T = 2.4, W = 7.5, e = 12.85382422;
     const double z0 = 60.0 * std::log(4.0 * (2.0 * H + T) / (0.67 * emc::constants::pi * (0.8 * W + T)))
                       / std::sqrt(e);
     return z0 > 60.4 && z0 < 60.6;
-}(), "stripline forward core must be constexpr-evaluable and ~60.52 ohm");
+}()), "stripline forward core must be ~60.52 ohm");
