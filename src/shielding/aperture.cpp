@@ -8,12 +8,14 @@ namespace emc::shielding {
 
 namespace {
 using namespace mp_units;
-using mp_units::international::unit_symbols::in;   // inch
+namespace intl = mp_units::international::unit_symbols;   // intl::in == inch
 
 // Evaluate every length in inches so the 27.3 / 32 constants reproduce exactly.
-// numerical_value_in(in) performs the exact unit conversion at the boundary, so a
-// caller may pass 2.0 * mm or 0.1 * in and no hand-rolled factor can be wrong.
-[[nodiscard]] double inches(emc::units::Length L) { return L.numerical_value_in(in); }
+// numerical_value_in(intl::in) performs the exact unit conversion at the boundary,
+// so a caller may pass 2.0 * mm or 0.1 * in and no hand-rolled factor can be wrong.
+// (The inch symbol is qualified, not a bare `using`, so it can't shadow the `in`
+// parameter names below — clang's -Wshadow flags that.)
+[[nodiscard]] double inches(emc::units::Length L) { return L.numerical_value_in(intl::in); }
 } // namespace
 
 std::expected<void, emc::Error> validate(const ApertureInput& in) {
