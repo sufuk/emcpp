@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>emcpp — Privacy Policy</title>
+<meta name="description" content="Privacy policy for the emcpp EMC &amp; RF calculator app.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --panel: #efeae0;
+    --panel-raised: #f7f4ee;
+    --ink: #1c2429;
+    --ink-muted: #5c6a72;
+    --hairline: #d8d1c4;
+    --readout-bg: #10171c;
+    --readout-ink: #e7edf0;
+    --trace: #0e8a94;
+    --trace-bright: #2fb7c2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --panel: #141a1f;
+      --panel-raised: #1c242b;
+      --ink: #e7edf0;
+      --ink-muted: #93a2ab;
+      --hairline: #2c363d;
+      --readout-bg: #0a0f13;
+      --readout-ink: #e7edf0;
+      --trace: #2fb7c2;
+      --trace-bright: #4fd3de;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--panel);
+    color: var(--ink);
+    font-family: "Space Grotesk", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap { max-width: 46rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+  .readout {
+    background: var(--readout-bg);
+    color: var(--readout-ink);
+    border-radius: 14px;
+    padding: 1.5rem 1.5rem 1.6rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,.18);
+  }
+  .readout .kicker {
+    font-family: "Space Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: .72rem;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    color: var(--trace-bright);
+    margin: 0 0 .5rem;
+  }
+  .readout h1 { margin: 0; font-size: 1.9rem; font-weight: 700; letter-spacing: -.01em; }
+  .readout .updated {
+    font-family: "Space Mono", monospace;
+    font-size: .8rem; color: var(--ink-muted); margin: .7rem 0 0;
+  }
+  h2 {
+    font-size: 1.05rem; font-weight: 700; margin: 2.4rem 0 .5rem;
+    padding-bottom: .35rem; border-bottom: 1px solid var(--hairline);
+    letter-spacing: -.01em;
+  }
+  h2 .n {
+    font-family: "Space Mono", monospace; color: var(--trace);
+    font-size: .85rem; margin-right: .5rem;
+  }
+  p, li { color: var(--ink); }
+  .muted { color: var(--ink-muted); }
+  a { color: var(--trace); text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--trace) 40%, transparent); }
+  a:hover { border-bottom-color: var(--trace); }
+  ul { padding-left: 1.15rem; }
+  li { margin: .3rem 0; }
+  code { font-family: "Space Mono", monospace; font-size: .9em; background: var(--panel-raised); padding: .05em .35em; border-radius: 4px; }
+  footer {
+    margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--hairline);
+    font-family: "Space Mono", monospace; font-size: .78rem; color: var(--ink-muted);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="readout">
+    <p class="kicker">emcpp · privacy</p>
+    <h1>Privacy Policy</h1>
+    <p class="updated">Effective 20 July 2026</p>
+  </header>
+
+  <p>This policy explains how the <strong>emcpp</strong> mobile app (“the app”) handles
+  information. emcpp is a suite of electromagnetic-compatibility and RF engineering
+  calculators, published by Semih Ufuk Güler. In short: <strong>the app collects no
+  personal data and does not track you.</strong></p>
+
+  <h2><span class="n">01</span>What the app does</h2>
+  <p>You enter numeric engineering parameters (for example a frequency, a length, or a
+  material property). The app sends those numbers to the emcpp compute service over a
+  secure HTTPS connection, which calculates a result and returns it for display. That is
+  the app’s entire network activity.</p>
+
+  <h2><span class="n">02</span>Information we do not collect</h2>
+  <p>The app has no accounts and asks for no personal information. It does
+  <strong>not</strong> collect or access your name, email, phone number, location,
+  contacts, photos, device identifiers for tracking, or any advertising identifier. There
+  is no analytics SDK, no advertising, and no third-party tracking of any kind.</p>
+
+  <h2><span class="n">03</span>The parameters you send</h2>
+  <p>The only data transmitted are the numeric values you type in order to compute a
+  result. They are sent solely to return that result and are not linked to your identity or
+  used to build a profile. The compute service may keep standard, short-lived technical
+  logs (such as a timestamp and the request status) for reliability and security; these
+  logs are not used to identify you and are not sold or shared.</p>
+
+  <h2><span class="n">04</span>Data sharing and sale</h2>
+  <p>We do not sell your data and do not share it with third parties. The numeric
+  parameters are processed only by the emcpp compute service, which is our own
+  infrastructure, for the sole purpose of returning your calculation.</p>
+
+  <h2><span class="n">05</span>Data retention</h2>
+  <p>Because the app collects no personal data, there is no personal profile to retain.
+  Calculation inputs are processed to return your result and are not stored as personal
+  data. Operational server logs, where present, are retained only briefly and then
+  discarded on a rolling basis.</p>
+
+  <h2><span class="n">06</span>Children</h2>
+  <p>The app is a professional engineering tool, is not directed at children, and collects
+  no personal data from anyone, including children.</p>
+
+  <h2><span class="n">07</span>Your choices</h2>
+  <p>Since no personal data is collected, there is nothing to request access to, correct,
+  or delete. If you have any question about this policy, contact us at the address below.</p>
+
+  <h2><span class="n">08</span>Changes to this policy</h2>
+  <p>If this policy changes, we will update the text and the effective date at the top of
+  this page. Continued use of the app after an update means you accept the revised policy.</p>
+
+  <h2><span class="n">09</span>Contact</h2>
+  <p>Questions about privacy: <a href="mailto:sufukguler@gmail.com">sufukguler@gmail.com</a></p>
+
+  <footer>
+    emcpp — EMC &amp; RF bench calculators · <span class="muted">Semih Ufuk Güler</span>
+  </footer>
+</div>
+</body>
+</html>
